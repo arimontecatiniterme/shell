@@ -1,0 +1,130 @@
+ for (sregex_iterator it = sregex_iterator(__cmd__.begin(), __cmd__.end(), r); it != sregex_iterator(); it++) {
+    result = *it;
+
+    std::cout << "..";
+
+
+    
+    if (sRow.find(result.str(0)) != std::string::npos) {
+      std::cout << "\n\n\t" << "ATTENZIONE switch ripetuti....";
+      return "";
+    } else {
+
+      asSWITCH[iRow][iCol] = result.str(0);
+      //std::cout << "\n(" << iRow << "," << iCol <<")=" << result.str(0);
+       
+      iCol++;
+
+      if(iCol>1){
+        iCol=0;
+        iRow++;
+        //std::cout << "\n(" << iRow << "," << iCol <<")=" << result.str(0);
+        asSWITCH[iRow][iCol] = result.str(0);
+        iCol++;
+        asSWITCH[iRow][iCol] = result.str(0);
+      }
+    }
+  }
+ 
+  asSWITCH[iRow][iCol] = "";
+
+  for (iRow=0;iRow<iSize;iRow++){
+    if(asSWITCH[iRow][0] != "" ){asSWITCH[iRow][2] ="(" + asSWITCH[iRow][0] + ")(.+)";}
+    if(asSWITCH[iRow][1] != "" ){asSWITCH[iRow][2]=asSWITCH[iRow][2] + "(" + asSWITCH[iRow][1] +")";}
+  }
+
+
+  for (iRow=0;iRow<iSize;iRow++){
+    if(asSWITCH[iRow][0] != ""){
+      std::regex rSWITCH(asSWITCH[iRow][2]);
+      regex_search(__cmd__, result, rSWITCH);
+      sTemp = trim(result.str(0));
+      if(asSWITCH[iRow][1] != ""){
+        sTemp = trim(sTemp.substr(2,sTemp.length()-4));
+      }else {
+        sTemp = trim(sTemp.substr(2,sTemp.length()));
+      }
+      asSWITCH[iRow][3]=sTemp;
+    }
+  }
+ 
+  
+
+  // separazione delle regole di estrazione
+  sTemp= "";
+  sF   = "";
+  sI   = "";
+  sR   = "";
+  sV   = "";
+  sO   = "";
+
+  for (iRow=0;iRow<iSize; iRow++) {
+
+    if(asSWITCH[iRow][0] != "" ){
+      sTemp=trim(asSWITCH[iRow][0]);
+      cSwitch=&sTemp[1];
+
+      // std::cout << "\n\t\t" << asSWITCH[iIndex][0] << "(" << cSwitch << ")\t" << asSWITCH[iIndex][1] << "\t" << asSWITCH[iIndex][2];
+   
+      switch (*cSwitch) {
+      case 'f': { // nome del file
+        sF=asSWITCH[iRow][3];
+        FILES = s2S(cfgshell.__cur_path__ + trim(sF));
+        if(SPIFFS.exists(FILES)){
+          FS= SPIFFS.open(FILES);
+        } else {
+          return "";       
+        }
+
+        break;}
+      case 'i': { // regola di estrazione della riga del file
+        sI=asSWITCH[iRow][3];
+        break;}
+      case 'r': { // regola di estrazione del nome della variabile
+        sR=asSWITCH[iRow][3];
+        break;}
+      case 'v': { // regola di estrazione del valore 
+        sV=asSWITCH[iRow][3];
+        break;}
+      case 'n': { // nome della variabile 
+        sN=asSWITCH[iRow][3];
+        break;}
+      case 'o': { // nome della variabile 
+        sO=asSWITCH[iRow][3];
+        FILEO = s2S(cfgshell.__cur_path__ + trim(sO));
+        if(SPIFFS.exists(FILEO)){
+          shell::rm(cfgshell.__cur_path__ + trim(sO));
+        }
+        FO = SPIFFS.open(FILEO, "w");
+        break;}
+      }
+    }
+  }
+
+  for (iRow=0;iRow<iSize;iRow++){
+    std::cout << "\n"<< iRow << "[0][1][2][3]=[" << asSWITCH[iRow][0] << "][" << asSWITCH[iRow][1] << "][" << asSWITCH[iRow][2] << "][" << asSWITCH[iRow][3] << "]";
+  }
+
+  std::cout << "\n";
+  sRow="";
+  
+  // valutazione dello switch -i
+  if (sI.length()>0){
+    int iAux=0;
+    vector <string> aRow;
+    std::regex rI(sI);
+
+    while(FS.available()){ // legge il file finche' ci sono righe
+      //ROW   = FS.readStringUntil('\n');
+      //aRow.push_back(S2s(FS.readStringUntil('\n')));
+      
+      //std::cout << regex_search(sRow, result,rI);
+      
+    } // end while()
+
+    FS.close();
+
+  } else {
+    return "";
+  }
+ 

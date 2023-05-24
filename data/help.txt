@@ -1,0 +1,28 @@
+HELP FOR SHELL 
+
+// aggiornamento del vettore
+    switch (cMode)
+    {
+    case 'a': /* old value + new value */
+      it->value = it->value + sValue;
+      break;
+
+    case 'b': /* new value + old value */
+      it->value = sValue + it->value;
+      break;
+
+    case 'm': /* modify value */
+      it->value = sValue;
+      break;
+
+    case 'd':
+      aVar.erase(aVar.begin() + std::distance(aVar.begin(), it));
+      break;
+
+    default:
+      if (sValue.size() > 0)
+      {
+        aVar.push_back({sName, sValue});
+      }
+      break;
+    }
