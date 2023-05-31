@@ -17,7 +17,9 @@
 /* lib personali */
 #include "input.h"
 #include "shell.h"
-// #include <Regexp.h>
+
+/* lib di LoRa*/
+#include "LoRa_E32.h"
 
 #define __MACHINE__ ARDUINO
 #define DBG 1
@@ -50,6 +52,13 @@ shell::shell()
 
   // pulisce il vettore delle variabili
   aVar.clear();
+
+  // inizializza il vettore delle configurazioni di LoRa
+  // LoRaMode.push_back({M0,M1,nome modo});
+  LoRaMode.push_back({1, 1, "program"}); /* modo programmazione */
+  LoRaMode.push_back({0, 0, "txrx"});    /* modo txrx */
+  LoRaMode.push_back({0, 1, "psave"});   /* modo power saved */
+  LoRaMode.push_back({1, 0, "wakeup"});  /* modo tx segnale di wakeup*/
 }
 
 /* attiva disattiva il debug  */
@@ -1364,7 +1373,7 @@ boolean shell::start()
   srand(time(NULL));
 
   /* regole di estrazione dei comandi */
-  regex r("^([ ]{0,}(ls|cp|grep|set|echo|format|edlin|rm|mv|exit|cls|ifup|help|cat))");
+  regex r("^([ ]{0,}(ls|cp|grep|set|echo|format|edlin|rm|mv|exit|cls|ifup|help|cat|lora))");
   /* status :         |  |   |    |  |   |  |   |     |   |   |    |   |    | */
   /*                 OK  |   |    | OK   |  |   |     |   |   |    OK  |    */
   /*                    OK   |    |     OK  |   |     |   |   OK       | */
@@ -1534,7 +1543,15 @@ boolean shell::start()
     { // esecuzione del comando ( comando interno )
       shell::flag("((--(reg|num))|<<|>>|>)", cfgshell.__row__);
       shell::grep();
-      cfgshell.__cmd__ = "";
+      cfgshell.__row__ = "";
+      shell::cleanFlag();
+    }
+
+    else if (result.str(0) == "lora")
+    { // esecuzione del comando ( comando interno )
+      shell::flag("((--(mode|tx))|<<)", cfgshell.__row__);
+      shell::lora();
+      cfgshell.__row__ = "";
       shell::cleanFlag();
     }
 
@@ -1564,5 +1581,113 @@ void shell::cleanFlag()
     shell::setFlag("", iAux);
     shell::setPos(0, iAux);
     shell::setValue("", iAux);
+  }
+}
+
+//************************************************************/
+//
+//       ID :
+// Descrive : gestisce una scheda lora
+//     Date :
+//   Author : Andrea Venuti
+//   return :
+//
+//************************************************************/
+void shell::lora()
+{
+
+  int iM0; // impostazione del pin M0 al valore di default
+  int iM1; // impostazione del pin M1 al valore di default
+
+  File pFileIN;
+  String FO;
+
+  string sRow;
+  string sMode;
+  string sTX;
+
+  smatch result;
+
+  if ((shell::readFlag("<<")).size() > 0)
+  {
+    /* apertura del file in modo sovrascrittura */
+    FO = shell::s2S(shell::getPath() + shell::readFlag("<<"));
+    __PRTVAR__("<<", shell::getPath() + shell::readFlag("<<"))
+
+    if (SPIFFS.exists(FO))
+    {
+      pFileIN = SPIFFS.open(FO);
+      regex m("(mode)( ){0,}(=)( ){0,}[psave|program|txrx|wakeup]");
+      regex t("(tx)( ){0,}(=)( ){0,}[\\w ]+");
+
+      while (pFileIN.available())
+      {
+        sRow = S2s(pFileIN.readStringUntil('\n'));
+
+        regex_search(sRow, result, m);
+        if ((result.str(0)).size())
+        {
+          sMode = result.str(0);
+        }
+
+        regex_search(sRow, result, t);
+        if ((result.str(0)).size())
+        {
+          sTX = result.str(0);
+        }
+      }
+    }
+  }
+  else
+  {
+    sMode = shell::readFlag("--mode");
+    sTX = shell::readFlag("--tx");
+    __PRTDBG__
+  }
+
+  __PRTVAR__("mode", sMode)
+  __PRTVAR__("tx", sTX)
+
+  if (sMode.size() > 0)
+  {
+    /* ricerca il modo all'interno dell'array di LoRa mode */
+    boolean bFound = false;
+    auto it = LoRaMode.begin();
+    int iIndex = 0;
+    while (it != LoRaMode.end() && !bFound)
+    {
+      if (it->sName == sMode)
+      {
+
+        bFound = true;
+        myLoRa.iM0 = it->iM0;
+        myLoRa.iM1 = it->iM1;
+
+        /* impostazione dei PIN di M0 e M1 */
+
+        if (myLoRa.iM0 == 1)
+          digitalWrite(GPIO_NUM_2, HIGH);
+        else
+          digitalWrite(GPIO_NUM_2, LOW);
+        
+        if (myLoRa.iM1 == 1)
+          digitalWrite(GPIO_NUM_0 , HIGH);
+        else
+          digitalWrite(GPIO_NUM_0, LOW);
+      
+      }
+      else
+      {
+        it++;
+      }
+    }
+  }
+
+  __PRTVAR__("myLoRa.M0", myLoRa.iM0)
+  __PRTVAR__("myLoRa.M1", myLoRa.iM1)
+
+  if (sTX.size() > 0)
+  {
+    __PRTVAR__("...invio messaggio...", "")
   }
 }

@@ -13,7 +13,30 @@ using namespace std;
 class shell
 {
 private:
- 
+  /* struttura che modella un possibile stato dei PIN M0 e M1 di una generica board lora */
+  struct
+  {
+    int iM0;
+    int iM1;
+    string sName;
+  } typedef M0M1;
+
+  /* struttura che modella tutti i possibili stati dei PIN M0 e M1 di una board LoRa */
+  std::vector<M0M1> LoRaMode;
+
+  /* variabile che descrive lo stato di una generica board LoRa */
+  struct
+  {
+    int iM0;          // livello di segnale del pin M0
+    int iM1;          // livello di segnale del pin M1
+    int iAux;         // livello di segnale del pin AUX
+    int iCH;          // canale di trasmisisone
+    int iLowByteAdr;  // valore della parte bassa dell'indirizzo [0 - 255]
+    int iHighByteAdr; // valore della parte alta dell'indirizzo [0 - 255]
+  } typedef LoRa;
+
+  /* variabile che modella lo stato di una scheda specifica scheda LoRa*/
+  LoRa myLoRa;
 
   struct
   {
@@ -43,11 +66,11 @@ private:
 
   cell aReg[6];
 
-
-struct {
-  string name;
-  string value;
-} typedef memvar;
+  struct
+  {
+    string name;
+    string value;
+  } typedef memvar;
 
   std::vector<memvar> aVar;
 
@@ -71,6 +94,10 @@ public:
   void grep();             // ritorna la sottostringa estratta dal comando grep se
                            // impostato il paramatero --var
 
+  void lora(); // gestisce una scheda lora collegata alla board
+
+  /* UTILITY DI LORA */
+
   /* UTILITY DI SHELL */
   void setMode(boolean __set__) { cfgshell.__mode__ = __set__; } // imposta la modalita' di shell
   String s2S(string);                                            // converte da String a string
@@ -81,8 +108,6 @@ public:
   string row();                                                  // attiva l'input del comando
   string extract(string, string);                                // ritorna il valore di una regexp
   int dbg();                                                     // attiva disattiva il debug
-
-
 
   /* Utility della matrice dei Flag */
   void flag(string, string);                                                             // costruisce la matrice dei flag
