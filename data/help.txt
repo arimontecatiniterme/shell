@@ -1,5 +1,57 @@
 HELP FOR SHELL 
+--------------
 
+ambiente di shell per borad di tipo ESP32 / arduino / ESP8266 . Puo' essere utilizzata interagendo direttamente con l'ambiente di lavoro
+ ( richiamo del metodo start() della classe ) oppure in modo trasparente ( richiamo del metodo trasparent( comando ) ).
+
+E' possibile utilizzare la pipe [comando 1]|[comando 2]|...|[comando n] che puo' essere costruita solo con comandi che prevedono
+il redirect. Nella catena il primo comando deve avere almeno il redirect in uscita ">>" e l'ultimo almeno in ingresso "<<". Il passaggio dei
+dei parametri tra un comando e l'atro avviene mediante file con estensione [.tmp]
+
+
+-------------------------------------------------------------------------------------
+
+
+cls - cancella lo schermo
+
+help - visualizza questo file
+
+exit - esce dall'ambiente di shell distruggendo tute le variabili create e la struttura di tipo lora
+
+cat [file] - visulizza il contenuto del file [file]
+
+format - formatta il file system di tipo SPIFFS
+
+mv [file_origine] [file_dest] : muove il [file_origine] nel file [file_dest]
+
+cp [file_origine] [file_dest] : copia il [file_origine] nel file [file_dest]
+
+rm file_dest : cancella il file_dest 
+
+edlin -f [file] : editor di linea per il file che se non esiste viene creato
+
+echo - visualizza le variabili di memoria
+       nessuna opzione : visuliazza a video il valore di tutte le variabili          
+       >> [file_dest] accoda il contenuto della/e variabile/i al file_dest
+       > [file_dest] memorizza il contenuto della/e variabile/i nel file_dest cancellando l'eventuale contnuto precedente
+       $var : visualizza il contenutenuto della variabile [var]
+
+set - imposta il valore di una variabile in memoria
+      var=valore : imposta la variabile var a valore
+      var= : cancella la variabile var
+      << [file] : imposta il valore delle variabili del [file], la sintassi nel file e' [var=valore]
+ 
+ls - elenca i file in una directory
+     -d : visualizza le dimensioni
+     -t : visualizza il timestamp
+     >> : output su file
+
+grep [--reg|--num|<<|>>|>] - parsing di espressioni regolari secondo la semantica del C++ .
+     --reg : espressione regolare da utilizzare
+     --num : NON IMPLEMENTATO
+     >> [file] : accoda il contenuto dell'elaborazione al file [file]
+     > [file] : memorizza il contenuto nell'elaborazione nel file [file] cancellando l'eventuale contenuto precedente
+     << [file] : 
 
 lora - gestisce la configurazione / trasmissione di una scheda lora
        --mode [program|txrx|psave|wakeup] imposta il modo di configurazione dei pin M0/M1

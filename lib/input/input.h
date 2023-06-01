@@ -1,6 +1,26 @@
-#include <iostream>
+/*
+ * ARI Montecatini
+ *
+ * https://arimontecatini.it
+ * 
+ * IU5HLS - Andrea Venuti
+ * 
+ * Amplia la gestione dell'input direttamente su porta seriale permettendo di scrivere stringhe in modo continuo
+ *  
+ */
+
+
+/* 
+* inclusione delle librerie standard di ESP32
+*/
 #include <Arduino.h>
+
+/* 
+* inclusione delle librerie standard di C++
+*/
+#include <iostream>
 #include <string>
+#include <regex>
 
 #ifndef __INPUT__
 #define __INPUT__

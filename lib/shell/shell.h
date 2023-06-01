@@ -1,10 +1,49 @@
-#include <Arduino.h>
+/*
+ * ARI Montecatini - PTLUG Pistoia
+ *
+ * https://arimontecatini.it
+ * https://ptlug2.altervista.org
+ *
+ * IU5HLS - Andrea Venuti
+ *
+ * Dichiara i metodi per la classe shell che modella l'omonimo ambiente da utilizzare su porta seriale
+ *
+ */
 
+/*
+ * include le librerie standard per ESP32
+ */
+#include <Arduino.h>   /* si utilizza per gli oggetti String */
+#include "driver/gpio.h" // Libreria per la gestione dei PIN della ESP32
+#include <FS.h>          // Libreria per le funzionalita del file system
+#include <SPIFFS.h>      /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
+#include <WebServer.h>   /* libreria per la gestione del webserver */
+#include <WiFi.h>        /* libreria per la gestione del modulo wifi *
+
+
+/*
+ * include le librerie standard per C++
+ */
 #include <iostream>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <fstream>
+#include <regex>
+#include <tuple>
 
+/*
+ * include la libreria personalizzata per la gestione dell'input su seriale
+ */
 #include "input.h"
+
+
+/*
+* Importazione delle librerie di terze parti
+*/
+#include "LoRa_E32.h"    /* Libreria di utility per la gestione di una board LoRa scritta da Renzo Mischianti https://www.mischianti.org/ */
+
+
 
 #ifndef __SHELL__
 

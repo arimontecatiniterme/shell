@@ -1,34 +1,41 @@
-/* lib di arduino */
+/*
+ * ARI Montecatini - PTLUG Pistoia
+ *
+ * https://arimontecatini.it
+ * https://ptlug2.altervista.org
+ *
+ * IU5HLS - Andrea Venuti
+ *
+ * Definisce i metodi per la classe shell che modella l'omonimo ambiente da utilizzare su porta seriale
+ *
+ */
 
-#include <Arduino.h>
-#include <FS.h>
-#include <SPIFFS.h>
-#include <WiFi.h>
+/*
+ * include le librerie personalizzate
+ */
+#include "shell.h" /* libreia che contiene le definizioni per i metodi implementati in questo file */
+#include "input.h" /* libreria per la gestione dell'input su seriale */
 
-/* lib C++ */
-#include <algorithm>
-#include <fstream>
-#include <iostream>
-#include <regex>
-#include <string>
-#include <tuple>
-#include <vector>
-
-/* lib personali */
-#include "input.h"
-#include "shell.h"
-
-/* lib di LoRa*/
-#include "LoRa_E32.h"
-
+/*
+ * definisce le costanti della classe
+ */
 #define __MACHINE__ ARDUINO
 #define DBG 1
+
+/*
+ * Macro che stampa le informazioni su file, linea e metodo da dove viene richiamata quando il metodo della classe ritorna true.
+ * Il meotodo ritorna true se la variabile debug=1
+ */
 #define __PRTDBG__                                                                               \
   if (shell::dbg())                                                                              \
   {                                                                                              \
     std::cout << "\n..." << __FILE__ << " - " << __LINE__ << " - " << __FUNCTION__ << std::endl; \
   }
 
+/*
+ * Macro che stampa le informazioni su file, linea e metodo nonche il valore delle variabili (x,y) da dove viene richiamata quando
+ * il metodo della classe ritorna true. Il meotodo ritorna true se la variabile debug=1
+ */
 #define __PRTVAR__(x, y)                                                            \
   if (shell::dbg())                                                                 \
   {                                                                                 \
@@ -1476,13 +1483,13 @@ boolean shell::start()
 
     else if (result.str(0) == "echo")
     { // imposta una variabile
+      __PRTDBG__;
       shell::echo(cfgshell.__row__);
       cfgshell.__row__ = "";
     }
 
     else if (result.str(0) == "set")
     { // imposta una variabile
-
       __PRTDBG__;
       shell::set(cfgshell.__row__);
       cfgshell.__row__ = "";
@@ -1669,12 +1676,11 @@ void shell::lora()
           digitalWrite(GPIO_NUM_2, HIGH);
         else
           digitalWrite(GPIO_NUM_2, LOW);
-        
+
         if (myLoRa.iM1 == 1)
-          digitalWrite(GPIO_NUM_0 , HIGH);
+          digitalWrite(GPIO_NUM_0, HIGH);
         else
           digitalWrite(GPIO_NUM_0, LOW);
-      
       }
       else
       {
