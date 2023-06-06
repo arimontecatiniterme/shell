@@ -13,37 +13,35 @@
 /*
  * include le librerie standard per ESP32
  */
-#include <Arduino.h>   /* si utilizza per gli oggetti String */
-#include "driver/gpio.h" // Libreria per la gestione dei PIN della ESP32
-#include <FS.h>          // Libreria per le funzionalita del file system
-#include <SPIFFS.h>      /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
-#include <WebServer.h>   /* libreria per la gestione del webserver */
-#include <WiFi.h>        /* libreria per la gestione del modulo wifi *
+#include <Arduino.h>        /* si utilizza per gli oggetti String */
+#include <FS.h>             // Libreria per le funzionalita del file system
+#include <SPIFFS.h>         /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
+#include <SoftwareSerial.h> /* include la libreria per la personalizzazione della comunicazione seriale */
+#include <WebServer.h>      /* libreria per la gestione del webserver */
+#include <WiFi.h>           /* libreria per la gestione del modulo wifi */
 
+/*
+ * Importazione delle librerie di terze parti
+ * Libreria di utility per la gestione di una board LoRa scritta da Renzo Mischianti https://www.mischianti.org/
+ */
+#include "LoRa_E220.h"
 
 /*
  * include le librerie standard per C++
  */
-#include <iostream>
-#include <string>
-#include <vector>
 #include <algorithm>
 #include <fstream>
+#include <iostream>
+#include <map>
 #include <regex>
+#include <string>
 #include <tuple>
+#include <vector>
 
 /*
  * include la libreria personalizzata per la gestione dell'input su seriale
  */
 #include "input.h"
-
-
-/*
-* Importazione delle librerie di terze parti
-*/
-#include "LoRa_E32.h"    /* Libreria di utility per la gestione di una board LoRa scritta da Renzo Mischianti https://www.mischianti.org/ */
-
-
 
 #ifndef __SHELL__
 
@@ -52,6 +50,14 @@ using namespace std;
 class shell
 {
 private:
+  /*
+   * una volta defniti i PIN si crea una struttura che modella la coppia
+   * (nome PIN, numero PIN) di modo da poterla utilizzare in un vettore che poi potra' essere
+   * passato a classi in cui sara' utilizzato
+   *
+   */
+  std::map<std::string, int> myPIN;
+
   /* struttura che modella un possibile stato dei PIN M0 e M1 di una generica board lora */
   struct
   {
@@ -62,20 +68,6 @@ private:
 
   /* struttura che modella tutti i possibili stati dei PIN M0 e M1 di una board LoRa */
   std::vector<M0M1> LoRaMode;
-
-  /* variabile che descrive lo stato di una generica board LoRa */
-  struct
-  {
-    int iM0;          // livello di segnale del pin M0
-    int iM1;          // livello di segnale del pin M1
-    int iAux;         // livello di segnale del pin AUX
-    int iCH;          // canale di trasmisisone
-    int iLowByteAdr;  // valore della parte bassa dell'indirizzo [0 - 255]
-    int iHighByteAdr; // valore della parte alta dell'indirizzo [0 - 255]
-  } typedef LoRa;
-
-  /* variabile che modella lo stato di una scheda specifica scheda LoRa*/
-  LoRa myLoRa;
 
   struct
   {
@@ -91,11 +83,7 @@ private:
     string __temp__;     // variabile temporanea
   } cfgshell;            // configurazione dell'ambiente di shell
 
-  string trim(const std::string &); // elimina gli spazi iniziali e finali
-  string rsearch(string, string);   // esegue la ricerca con regexp
-
-  void s2IP(string, int[]); // converte una stringa in un indirizzo IP
-
+  /* definisce la struttura della matrice dei flag per i comandi che lo prevedono */
   struct
   {
     string sFlag;  // contiene il flag della regexp
@@ -103,18 +91,37 @@ private:
     string sValue; // valore del flag
   } typedef cell;
 
+  /* crea l'array dei valori dei flag passati ad un comando */
   cell aReg[6];
 
+  /* modella una variabile di memoria */
   struct
   {
     string name;
     string value;
   } typedef memvar;
 
+  /* vettore delle variabili di memoria */
   std::vector<memvar> aVar;
+
+  /*
+   * Funzioni private della classe shell
+   */
+  void LoRaReadConf(string);        // legge la configurazione di una scheda LoRa
+  void LoRaInit();                  // inizializza una scheda LoRa
+  void s2IP(string, int[]);         // converte una stringa in un indirizzo IP
+  string trim(const std::string &); // elimina gli spazi iniziali e finali
+  string rsearch(string, string);   // esegue la ricerca con regexp
 
 public:
   shell(); // costruttore di default
+
+  /*
+   * Avvio della sessione di shell.
+   * Quando si passa la stringa del parametro formale la shell viene avviata in modo trasparente
+   * mentre quando il metodo viene richiamato senza alcun parametro la shell viene avviata in modo interattivo
+   */
+  boolean start(string); // avvio della sessione di shell
 
   /* COMANDI DI SHELL */
   void ifconfig();         // stampa lo stato della configurazione di rete
@@ -132,21 +139,18 @@ public:
                            // (c - client / a - acces point )
   void grep();             // ritorna la sottostringa estratta dal comando grep se
                            // impostato il paramatero --var
-
-  void lora(); // gestisce una scheda lora collegata alla board
-
-  /* UTILITY DI LORA */
+  void lora();             // gestisce una scheda lora collegata alla board
 
   /* UTILITY DI SHELL */
   void setMode(boolean __set__) { cfgshell.__mode__ = __set__; } // imposta la modalita' di shell
   String s2S(string);                                            // converte da String a string
   string S2s(String);                                            // converte da string a String
-  boolean start();                                               // avvio della sessione di shell
   string readLastCmd() { return cfgshell.__cmd__; }              // legge l'utimo comando digitato
   string getPath() { return cfgshell.__cur_path__; }             // legge la path corrente
   string row();                                                  // attiva l'input del comando
   string extract(string, string);                                // ritorna il valore di una regexp
   int dbg();                                                     // attiva disattiva il debug
+  void pin_push_back(string sName, int iValue) { myPIN[sName] = iValue; }
 
   /* Utility della matrice dei Flag */
   void flag(string, string);                                                             // costruisce la matrice dei flag

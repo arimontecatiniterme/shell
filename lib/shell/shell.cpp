@@ -66,6 +66,16 @@ shell::shell()
   LoRaMode.push_back({0, 0, "txrx"});    /* modo txrx */
   LoRaMode.push_back({0, 1, "psave"});   /* modo power saved */
   LoRaMode.push_back({1, 0, "wakeup"});  /* modo tx segnale di wakeup*/
+
+  /*
+   * modella una scheda di tipo LoRa
+   */
+
+  // inizializza la variabile della scheda LoRa
+  LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
+
+  // Startup all pins and UART
+  e220ttl.begin();
 }
 
 /* attiva disattiva il debug  */
@@ -1356,7 +1366,7 @@ void shell::echo(string __cmd__)
 //   return : true se il comando e' esterno
 //
 //************************************************************/
-boolean shell::start()
+boolean shell::start(string __cmd__)
 {
   smatch result;
   boolean bCMD = false;
@@ -1406,9 +1416,24 @@ boolean shell::start()
         cfgshell.__inpRow__.clear();
         std::cout << "\n...digita un comando valido oppure help per aiuto...\n";
         std::cout << cfgshell.__cur_path__;
-        std::cin >> cfgshell.__inpRow__;
-        cfgshell.__inpRow__.trim();
-        cfgshell.__row__ = cfgshell.__inpRow__;
+
+        if (__cmd__.size() == 0)
+        {
+          std::cin >> cfgshell.__inpRow__;
+          cfgshell.__inpRow__.trim();
+          cfgshell.__row__ = cfgshell.__inpRow__;
+        }
+        else
+        {
+          cfgshell.__row__ = __cmd__;
+
+          /*
+           * quando la shell viene avviata in modo trasparente e vi e' un unico comando da eseguire
+           * si disabilita l'ambiente di shell di modo che alla fine dell'esecuzione del comando il metodo viene 
+           * abbandonato.
+           */
+          cfgshell.__mode__ = false;
+        }
 
         iPipe = 0;
         iStart = 0;
@@ -1445,6 +1470,14 @@ boolean shell::start()
         if (iAux > iPipe)
         {
           bInput = true;
+
+          /*
+           * quando la shell viene avviata in modo trasparente e la catena della pipe
+           * e' esaurita allora si renede necessario terminare l'ambiente di shell.
+           */
+          if (__cmd__.size() > 0)
+            cfgshell.__mode__ = false;
+
           goto ReturnToInput;
         }
         else
@@ -1556,7 +1589,7 @@ boolean shell::start()
 
     else if (result.str(0) == "lora")
     { // esecuzione del comando ( comando interno )
-      shell::flag("((--(mode|tx))|<<)", cfgshell.__row__);
+      shell::flag("((--(read|mode|send|rconf))|<<|>>|>)", cfgshell.__row__);
       shell::lora();
       cfgshell.__row__ = "";
       shell::cleanFlag();
@@ -1603,21 +1636,19 @@ void shell::cleanFlag()
 void shell::lora()
 {
 
-  int iM0; // impostazione del pin M0 al valore di default
-  int iM1; // impostazione del pin M1 al valore di default
-
   File pFileIN;
   String FO;
 
   string sRow;
   string sMode;
+  string sAUX;
   string sTX;
 
   smatch result;
 
   if ((shell::readFlag("<<")).size() > 0)
   {
-    /* apertura del file in modo sovrascrittura */
+    /* apertura del file in modo lettura */
     FO = shell::s2S(shell::getPath() + shell::readFlag("<<"));
     __PRTVAR__("<<", shell::getPath() + shell::readFlag("<<"))
 
@@ -1629,14 +1660,17 @@ void shell::lora()
 
       while (pFileIN.available())
       {
+        /* legge la riga del file di input e la converte in una stringa del C++ */
         sRow = S2s(pFileIN.readStringUntil('\n'));
 
+        /* verifica se la stringa letta sia la struttura per l'impostazione dei PIN M0 e M1 */
         regex_search(sRow, result, m);
         if ((result.str(0)).size())
         {
           sMode = result.str(0);
         }
 
+        /* verifica se la stringa contiene un messaggio da trasmettere */
         regex_search(sRow, result, t);
         if ((result.str(0)).size())
         {
@@ -1655,33 +1689,37 @@ void shell::lora()
   __PRTVAR__("mode", sMode)
   __PRTVAR__("tx", sTX)
 
+  /* Eventuale impostazione dei pin M0 e M1 */
   if (sMode.size() > 0)
   {
-    /* ricerca il modo all'interno dell'array di LoRa mode */
+    /*
+     *se e' stato richiesto di impostare un modo di funzionamento della sheda LoRa
+     * si ricerca la configurazione richiesta all' interno dell'array
+     * LoRaMode
+     */
     boolean bFound = false;
     auto it = LoRaMode.begin();
     int iIndex = 0;
     while (it != LoRaMode.end() && !bFound)
     {
       if (it->sName == sMode)
+      /*
+       * Se il parametro passato al flag mode e' un parametro valido, cioe'
+       * se al nome corrisponde una coppia di valori nell'array LoraMode allora
+       * si impostano i rispettivi valori nella struttura myLoRa che modella la board
+       * in uso e posi si settano i ripettivi PIN.
+       *
+       */
       {
 
         bFound = true;
-        myLoRa.iM0 = it->iM0;
-        myLoRa.iM1 = it->iM1;
+        digitalWrite(myPIN["M0"], it->iM0);
+        digitalWrite(myPIN["M1"], it->iM1);
 
-        /* impostazione dei PIN di M0 e M1 */
-
-        if (myLoRa.iM0 == 1)
-          digitalWrite(GPIO_NUM_2, HIGH);
-        else
-          digitalWrite(GPIO_NUM_2, LOW);
-
-        if (myLoRa.iM1 == 1)
-          digitalWrite(GPIO_NUM_0, HIGH);
-        else
-          digitalWrite(GPIO_NUM_0, LOW);
+        __PRTVAR__("M0", digitalRead(myPIN["M0"]))
+        __PRTVAR__("M1", digitalRead(myPIN["M1"]))
       }
+
       else
       {
         it++;
@@ -1689,11 +1727,235 @@ void shell::lora()
     }
   }
 
-  __PRTVAR__("myLoRa.M0", myLoRa.iM0)
-  __PRTVAR__("myLoRa.M1", myLoRa.iM1)
-
   if (sTX.size() > 0)
   {
     __PRTVAR__("...invio messaggio...", "")
+  }
+
+  // shell::printFlag();
+
+  __PRTVAR__("--readconf", shell::readFlag("--rconf"))
+
+  if ((shell::readFlag("--rconf")).size() > 0)
+  {
+
+    shell::LoRaReadConf("");
+  }
+}
+
+/*
+ * Inizializza la scheda LoRa
+ */
+void shell::LoRaInit()
+{
+
+  LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
+}
+
+/*
+ * Legge la configurazione della scheda LoRa
+ */
+void shell::LoRaReadConf(string __cmd__)
+{
+
+  String FO;
+  String sMODE;
+  File pFILE;
+
+  Serial2.setPins(myPIN["TX"], myPIN["RX"]); // Arduino RX <-- e220 TX, Arduino TX --> e220 RX
+  LoRa_E220 e220ttl(&Serial2, myPIN["AUX"], myPIN["M0"], myPIN["M1"]);
+
+  e220ttl.begin();
+
+  ResponseStructContainer c;
+  c = e220ttl.getConfiguration();
+
+  // It's important get configuration pointer before all other operation
+  Configuration configuration = *(Configuration *)c.data;
+
+  ResponseStructContainer cMi;
+  cMi = e220ttl.getModuleInformation();
+  // It's important get information pointer before all other operation
+  ModuleInformation mi = *(ModuleInformation *)cMi.data;
+
+  if ((shell::readFlag(">>")).size() > 0)
+  {
+    __PRTDBG__
+    FO = shell::s2S(shell::getPath() + shell::readFlag(">>"));
+    pFILE = SPIFFS.open(FO.c_str(), "a+");
+  }
+  else if ((shell::readFlag(">")).size() > 0)
+  {
+    __PRTDBG__
+    FO = shell::s2S(shell::getPath() + shell::readFlag(">"));
+    pFILE = SPIFFS.open(FO.c_str(), "w");
+  }
+
+  __PRTVAR__("pFILE", pFILE)
+
+  if (pFILE)
+  {
+    __PRTDBG__
+
+    pFILE.println(c.status.getResponseDescription());
+    pFILE.println(c.status.code);
+    pFILE.println("----------------------------------------");
+    pFILE.print(F("HEAD : "));
+    pFILE.print(configuration.COMMAND, DEC);
+    pFILE.print(" ");
+    pFILE.println(configuration.STARTING_ADDRESS, DEC);
+    pFILE.println(" ");
+    pFILE.println(configuration.LENGHT, HEX);
+    pFILE.println(F(" "));
+    pFILE.print(F("AddH : "));
+    pFILE.println(configuration.ADDH, DEC);
+    pFILE.print(F("AddL : "));
+    pFILE.println(configuration.ADDL, DEC);
+    pFILE.println(F(" "));
+    pFILE.print(F("Chan : "));
+    pFILE.print(configuration.CHAN, DEC);
+    pFILE.print(" -> ");
+    pFILE.println(configuration.getChannelDescription());
+    pFILE.println(F(" "));
+    pFILE.print(F("SpeedParityBit     : "));
+    pFILE.print(configuration.SPED.uartParity, BIN);
+    pFILE.print(" -> ");
+    pFILE.println(configuration.SPED.getUARTParityDescription());
+    pFILE.print(F("SpeedUARTDatte     : "));
+    pFILE.print(configuration.SPED.uartBaudRate, BIN);
+    pFILE.print(" -> ");
+    pFILE.println(configuration.SPED.getUARTBaudRateDescription());
+    pFILE.print(F("SpeedAirDataRate   : "));
+    pFILE.print(configuration.SPED.airDataRate, BIN);
+    pFILE.print(" -> ");
+    pFILE.println(configuration.SPED.getAirDataRateDescription());
+    pFILE.println(F(" "));
+    pFILE.print(F("OptionSubPacketSett: "));
+    pFILE.print(configuration.OPTION.subPacketSetting, BIN);
+    pFILE.print(" -> ");
+    pFILE.println(configuration.OPTION.getSubPacketSetting());
+    pFILE.print(F("OptionTranPower    : "));
+    pFILE.print(configuration.OPTION.transmissionPower, BIN);
+    pFILE.print(" -> ");
+    pFILE.println(configuration.OPTION.getTransmissionPowerDescription());
+    pFILE.print(F("OptionRSSIAmbientNo: "));
+    pFILE.print(configuration.OPTION.RSSIAmbientNoise, BIN);
+    pFILE.print(" -> ");
+    pFILE.println(configuration.OPTION.getRSSIAmbientNoiseEnable());
+    pFILE.println(F(" "));
+    pFILE.print(F("TransModeWORPeriod : "));
+    pFILE.print(configuration.TRANSMISSION_MODE.WORPeriod, BIN);
+    pFILE.print(" -> ");
+    pFILE.println(configuration.TRANSMISSION_MODE.getWORPeriodByParamsDescription());
+    pFILE.print(F("TransModeEnableLBT : "));
+    pFILE.print(configuration.TRANSMISSION_MODE.enableLBT, BIN);
+    pFILE.print(" -> ");
+    pFILE.println(configuration.TRANSMISSION_MODE.getLBTEnableByteDescription());
+    pFILE.print(F("TransModeEnableRSSI: "));
+    pFILE.print(configuration.TRANSMISSION_MODE.enableRSSI, BIN);
+    pFILE.print(" -> ");
+    pFILE.println(configuration.TRANSMISSION_MODE.getRSSIEnableByteDescription());
+    pFILE.print(F("TransModeFixedTrans: "));
+    pFILE.print(configuration.TRANSMISSION_MODE.fixedTransmission, BIN);
+    pFILE.print(" -> ");
+    pFILE.println(configuration.TRANSMISSION_MODE.getFixedTransmissionDescription());
+    pFILE.println("----------------------------------------");
+    pFILE.print(F("HEAD: "));
+    pFILE.print(mi.COMMAND, DEC);
+    pFILE.print(" ");
+    pFILE.print(mi.STARTING_ADDRESS, DEC);
+    pFILE.print(" ");
+    pFILE.println(mi.LENGHT, DEC);
+    pFILE.print(F("Model no.: "));
+    pFILE.println(mi.model, DEC);
+    pFILE.print(F("Version  : "));
+    pFILE.println(mi.version, DEC);
+    pFILE.print(F("Features : "));
+    pFILE.println(mi.features, DEC);
+    pFILE.println("----------------------------------------");
+
+    pFILE.close();
+  }
+  else
+  {
+    __PRTDBG__
+
+    Serial.println();
+    Serial.println(c.status.getResponseDescription());
+    Serial.println(c.status.code);
+    Serial.println("----------------------------------------");
+    Serial.print(F("HEAD : "));
+    Serial.print(configuration.COMMAND, DEC);
+    Serial.print(" ");
+    Serial.print(configuration.STARTING_ADDRESS, DEC);
+    Serial.print(" ");
+    Serial.println(configuration.LENGHT, HEX);
+    Serial.println(F(" "));
+    Serial.print(F("AddH : "));
+    Serial.println(configuration.ADDH, DEC);
+    Serial.print(F("AddL : "));
+    Serial.println(configuration.ADDL, DEC);
+    Serial.println(F(" "));
+    Serial.print(F("Chan : "));
+    Serial.print(configuration.CHAN, DEC);
+    Serial.print(" -> ");
+    Serial.println(configuration.getChannelDescription());
+    Serial.println(F(" "));
+    Serial.print(F("SpeedParityBit     : "));
+    Serial.print(configuration.SPED.uartParity, BIN);
+    Serial.print(" -> ");
+    Serial.println(configuration.SPED.getUARTParityDescription());
+    Serial.print(F("SpeedUARTDatte     : "));
+    Serial.print(configuration.SPED.uartBaudRate, BIN);
+    Serial.print(" -> ");
+    Serial.println(configuration.SPED.getUARTBaudRateDescription());
+    Serial.print(F("SpeedAirDataRate   : "));
+    Serial.print(configuration.SPED.airDataRate, BIN);
+    Serial.print(" -> ");
+    Serial.println(configuration.SPED.getAirDataRateDescription());
+    Serial.println(F(" "));
+    Serial.print(F("OptionSubPacketSett: "));
+    Serial.print(configuration.OPTION.subPacketSetting, BIN);
+    Serial.print(" -> ");
+    Serial.println(configuration.OPTION.getSubPacketSetting());
+    Serial.print(F("OptionTranPower    : "));
+    Serial.print(configuration.OPTION.transmissionPower, BIN);
+    Serial.print(" -> ");
+    Serial.println(configuration.OPTION.getTransmissionPowerDescription());
+    Serial.print(F("OptionRSSIAmbientNo: "));
+    Serial.print(configuration.OPTION.RSSIAmbientNoise, BIN);
+    Serial.print(" -> ");
+    Serial.println(configuration.OPTION.getRSSIAmbientNoiseEnable());
+    Serial.println(F(" "));
+    Serial.print(F("TransModeWORPeriod : "));
+    Serial.print(configuration.TRANSMISSION_MODE.WORPeriod, BIN);
+    Serial.print(" -> ");
+    Serial.println(configuration.TRANSMISSION_MODE.getWORPeriodByParamsDescription());
+    Serial.print(F("TransModeEnableLBT : "));
+    Serial.print(configuration.TRANSMISSION_MODE.enableLBT, BIN);
+    Serial.print(" -> ");
+    Serial.println(configuration.TRANSMISSION_MODE.getLBTEnableByteDescription());
+    Serial.print(F("TransModeEnableRSSI: "));
+    Serial.print(configuration.TRANSMISSION_MODE.enableRSSI, BIN);
+    Serial.print(" -> ");
+    Serial.println(configuration.TRANSMISSION_MODE.getRSSIEnableByteDescription());
+    Serial.print(F("TransModeFixedTrans: "));
+    Serial.print(configuration.TRANSMISSION_MODE.fixedTransmission, BIN);
+    Serial.print(" -> ");
+    Serial.println(configuration.TRANSMISSION_MODE.getFixedTransmissionDescription());
+    Serial.println("----------------------------------------");
+    Serial.print(F("HEAD: "));
+    Serial.print(mi.COMMAND, DEC);
+    Serial.print(" ");
+    Serial.print(mi.STARTING_ADDRESS, DEC);
+    Serial.print(" ");
+    Serial.println(mi.LENGHT, DEC);
+    Serial.print(F("Model no.: "));
+    Serial.println(mi.model, DEC);
+    Serial.print(F("Version  : "));
+    Serial.println(mi.version, DEC);
+    Serial.print(F("Features : "));
+    Serial.println(mi.features, DEC);
+    Serial.println("----------------------------------------");
   }
 }

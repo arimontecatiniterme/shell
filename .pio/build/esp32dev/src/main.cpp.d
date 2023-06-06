@@ -193,4 +193,9 @@
  /home/andrea/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/nghttp/port/include/http_parser.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src/Uri.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src/detail/RequestHandler.h \
- lib/Regexp/src/Regexp.h lib/input/input.h lib/shell/shell.h
+ .pio/libdeps/esp32dev/EByte\ LoRa\ E220\ library/LoRa_E220.h \
+ .pio/libdeps/esp32dev/EByte\ LoRa\ E220\ library/includes/statesNaming.h \
+ lib/input/input.h lib/shell/shell.h \
+ .pio/libdeps/esp32dev/EspSoftwareSerial/src/SoftwareSerial.h \
+ .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/circular_queue.h \
+ .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/Delegate.h

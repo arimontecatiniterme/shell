@@ -27,16 +27,16 @@
  *      |   |
  *      \   /
  *       +-+
- * 
+ *
  * ESP32 / LoRa
  *
- * G0     -->     M0
- * G2     -->     M1
+ * G19    -->     M0
+ * G18    -->     M1
  * V5     -->     VCC
  * GND    -->     GND
- * G21    -->     AUX
- * TDX    -->     TX
- * RDX    -->     RX
+ * G16    -->     AUX
+ * G17    -->     TX
+ * G05    -->     RX
  */
 
 /*
@@ -78,32 +78,46 @@
 /*
  * Importazione delle librerie specifiche per ESP 32
  */
-#include "driver/gpio.h" // Libreria per la gestione dei PIN della ESP32
-#include <Arduino.h>     // Libreria standard di Arduino
-#include <FS.h>          // Libreria per le funzionalita del file system
-#include <SPIFFS.h>      /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
-#include <WebServer.h>   /* libreria per la gestione del webserver */
-#include <WiFi.h>        /* libreria per la gestione del modulo wifi */
+#include <Arduino.h>   // Libreria standard di Arduino
+#include <FS.h>        // Libreria per le funzionalita del file system
+#include <SPIFFS.h>    /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
+#include <WebServer.h> /* libreria per la gestione del webserver */
+#include <WiFi.h>      /* libreria per la gestione del modulo wifi */
 
 /*
-* Importazione delle librerie di terze parti
-*/
-#include "LoRa_E32.h"    /* Libreia di utility per la gestione di una board LoRa scritta da Renzo Mischianti https://www.mischianti.org/ */
+ * Importazione delle librerie di terze parti
+ * Libreria di utility per la gestione di una board LoRa scritta da Renzo Mischianti https://www.mischianti.org/
+ */
+#include "LoRa_E220.h"
 
+/*
+ * librerie specifiche del progetto path ./lib/.....
+ */
+#include "input.h" /* simula l'input da riga di comando sulla porta seriale */
+#include "shell.h" /* mette a disposizione una shell utilizzabile con la seriale oppure in modo trasparente */
 
-/* 
-* librerie specifiche del progetto path ./lib/..... 
-*/
-#include "input.h"       /* simula l'input da riga di comando sulla porta seriale */
-#include "shell.h"       /* mette a disposizione una shell utilizzabile con la seriale oppure in modo trasparente */
+/*
+ * librerie standard del C++
+ */
+#include <iostream>
+#include <string>
+#include <vector>
 
-
-
-/* Associazione dei PIN della ESP32 */
-#define BUTTON 16 // pin per l'accesso al menu
-#define M0 GPIO_NUM_0
-#define M1 GPIO_NUM_2
-
+/* Associazione dei PIN della ESP32 alla board LoRa
+ * G21    -->     M0
+ * G19    -->     M1
+ * V5     -->     VCC
+ * GND    -->     GND
+ * G18    -->     AUX
+ * G16    -->     TX
+ * G17    -->     RX
+ */
+#define BUTTON GPIO_NUM_12 // pin per il button che permette l'accesso alla shell
+#define M0 GPIO_NUM_21
+#define M1 GPIO_NUM_19
+#define AUX GPIO_NUM_18
+#define TX GPIO_NUM_16
+#define RX GPIO_NUM_17
 
 /* Definisce la struttura di una nuova varibile di tipo board */
 struct
@@ -122,6 +136,8 @@ machine myBoard;
 
 /* oggetto di tipo shell */
 shell sh;
+
+/* definisce una seriale virtuale per comunicare con LoRa */
 
 /* funzione senza scopo da utilizzare per impegnare il tempo */
 void makesAnything()
@@ -176,6 +192,15 @@ void setup()
   pinMode(BUTTON, INPUT);
   pinMode(M0, OUTPUT);
   pinMode(M1, OUTPUT);
+  pinMode(AUX, OUTPUT);
+
+  /* costruisce l'array dei PIN */
+  sh.pin_push_back("BUTTON", BUTTON);
+  sh.pin_push_back("M0", M0);
+  sh.pin_push_back("M1", M1);
+  sh.pin_push_back("AUX", AUX);
+  sh.pin_push_back("TX", TX);
+  sh.pin_push_back("RX", RX);
 
   /* inizializza il filesystem */
   Serial.print(F("Inizializing FS..."));
@@ -199,20 +224,14 @@ void setup()
 void loop()
 {
   // alla pressione del tasto BUTTON
+  myBoard.bshMode = sh.start("ls -d");
+  Serial.println("####");
+  myBoard.bshMode = sh.start("ls -d|cat");
+  Serial.println("####");
 
-  if (myBoard.bshMode)
-  // esegue la modalita' shell
-  {
-    /* sh.start() ritorna true se il comando e' esterno alla shell, false
-     * altrimenti */
-    myBoard.bshMode = sh.start();
-  }
+  myBoard.bshMode = sh.start("");
 
-  if (!myBoard.bshMode)
-  /* se il sistema non e' in modalita' shell si eseguono le altre istruzioni
-   */
-  {
-    makesAnything();
-    delay(2000);
-  }
+  delay(2000);
+
+  Serial.println("...");
 }

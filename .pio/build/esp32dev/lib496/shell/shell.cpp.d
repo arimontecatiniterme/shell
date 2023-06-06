@@ -1,4 +1,5 @@
 .pio/build/esp32dev/lib496/shell/shell.cpp.o: lib/shell/shell.cpp \
+ lib/shell/shell.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/cores/esp32/Arduino.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp_arduino_version.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include/freertos/FreeRTOS.h \
@@ -129,6 +130,10 @@
  /home/andrea/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_hw_support/include/soc/esp32/spiram.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/FS/src/FS.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/SPIFFS/src/SPIFFS.h \
+ .pio/libdeps/esp32dev/EspSoftwareSerial/src/SoftwareSerial.h \
+ .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/circular_queue.h \
+ .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/Delegate.h \
+ /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src/WebServer.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFi.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/cores/esp32/Print.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/cores/esp32/IPv6Address.h \
@@ -188,6 +193,10 @@
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFiUdp.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/cores/esp32/Udp.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/cores/esp32/cbuf.h \
- lib/input/input.h lib/shell/shell.h \
- .pio/libdeps/esp32dev/EByte\ LoRa\ E32\ library/LoRa_E32.h \
- .pio/libdeps/esp32dev/EByte\ LoRa\ E32\ library/includes/statesNaming.h
+ /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src/HTTP_Method.h \
+ /home/andrea/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/nghttp/port/include/http_parser.h \
+ /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src/Uri.h \
+ /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src/detail/RequestHandler.h \
+ .pio/libdeps/esp32dev/EByte\ LoRa\ E220\ library/LoRa_E220.h \
+ .pio/libdeps/esp32dev/EByte\ LoRa\ E220\ library/includes/statesNaming.h \
+ lib/input/input.h

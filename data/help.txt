@@ -8,8 +8,20 @@ E' possibile utilizzare la pipe [comando 1]|[comando 2]|...|[comando n] che puo'
 il redirect. Nella catena il primo comando deve avere almeno il redirect in uscita ">>" e l'ultimo almeno in ingresso "<<". Il passaggio dei
 dei parametri tra un comando e l'atro avviene mediante file con estensione [.tmp]
 
+------------------------------------------------------------------------------------
 
--------------------------------------------------------------------------------------
+Il redirect puo' essere :
+
+>> [file] : redirect in uscita in modo accodamento a file;
+>  [file] : redirect in uscita in modo sovrascrittura ( riscrive l'intero contenuto nel file )
+<< [file] : redirect in ingresso i parametri vengono letti dal file  
+
+------------------------------------------------------------------------------------
+
+L'ambiente di shell puo' essere richiamata in modo iterattivo ...shell("");
+oppure in modo trasparente ...shell([comando | catena di pipe]);
+
+------------------------------------------------------------------------------------
 
 
 cls - cancella lo schermo
@@ -49,6 +61,8 @@ ls - elenca i file in una directory
 grep [--reg|--num|<<|>>|>] - parsing di espressioni regolari secondo la semantica del C++ .
      --reg : espressione regolare da utilizzare
      --num : NON IMPLEMENTATO
+     --read : legge le impostazioni della board LoRa
+     --aux [0|1] : imposta il PIN AUX di LoRa 
      >> [file] : accoda il contenuto dell'elaborazione al file [file]
      > [file] : memorizza il contenuto nell'elaborazione nel file [file] cancellando l'eventuale contenuto precedente
      << [file] : 
@@ -59,6 +73,8 @@ lora - gestisce la configurazione / trasmissione di una scheda lora
               txrx - imposta {M0,M1}={0,0}
               psave -  imposta {M0,M1}={0,1}
               wakeup - imposta {M0,M1}={1,0}
-       --tx - il testo che segue il flag e' il messaggio da inviare
+       --tx [testo da trasmettere]: il testo che segue il flag e' il messaggio da inviare
+       --cread [num. della board LoRa]: legge le impostazioni della board LoRa
        << - carica da file la configurazione di {M0,M1} e/o il messaggio da inviare
             la sintassi dei flag all' interno del file di input e' [flag = valore]
+       [>>|>] :: output su file 
