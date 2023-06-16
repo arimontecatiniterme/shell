@@ -58,17 +58,39 @@ private:
    */
   std::map<std::string, int> myPIN;
 
-  /* struttura che modella un possibile stato dei PIN M0 e M1 di una generica board lora */
-  struct
-  {
-    int iM0;
-    int iM1;
-    string sName;
-  } typedef M0M1;
 
-  /* struttura che modella tutti i possibili stati dei PIN M0 e M1 di una board LoRa */
-  std::vector<M0M1> LoRaMode;
+  // definisce una variabile di tipo LoRa
+  /*
+  * Definisce una variabile che modella una board di tipo LoRa
+  *
+  * valori di default
+  *
+  * TX  ---> GPIO_NUM_16
+  * RX  ---> GPIO_NUM_17
+  * 
+  * AUX ---> GPIO_NUM_18
+  * 
+  * MO  ---> GPIO_NUM_21
+  * M1  ---> GPIO_NUM_19
+  * 
+  * &Serial2  comunicazione da/per board ESP32
+  * 
+  * HS  ---> NULL
+  * 
+  */
+  //LoRa_E220* e220ttl;
 
+
+
+/*
+* ---------------------------------------------------------------------------------------------
+* Crea le mappe dei valori per la configurazione della scheda LoRa
+*/
+
+ 
+  /*
+   * crea una struttura che modella lo stato della shell
+   */
   struct
   {
     string __cmd__;      // ultimo comando digitato
@@ -107,11 +129,22 @@ private:
   /*
    * Funzioni private della classe shell
    */
-  void LoRaReadConf(string);        // legge la configurazione di una scheda LoRa
-  void LoRaInit();                  // inizializza una scheda LoRa
+
+  /*
+   * effettua il parsing delle opzioni passate da linea di comando oppure lette da file
+   * per ogni opzione valida richiama il metodo LoRaSetConf per l'impostazione
+   */
+  void LoRaParseConf();                       // effetua la scansione delle opzioni
+  void LoRaParseConf(string);     // imposta una configurazione di memoria
+  void LoRaReadConf();      // Legge la Configurazione di una board
+  void LoRaSetConf(string, string);
+
+  // FUNZIONI DI UTILITA' DELLA CLASSE SHELL
   void s2IP(string, int[]);         // converte una stringa in un indirizzo IP
   string trim(const std::string &); // elimina gli spazi iniziali e finali
   string rsearch(string, string);   // esegue la ricerca con regexp
+
+
 
 public:
   shell(); // costruttore di default
@@ -134,12 +167,12 @@ public:
   boolean format();        // formatta il file system
   boolean mv(string);      // sposta un file
   void set(string);        // imposta il valore di una vairabile
-  void echo(string);       // visualizza il valore una variabile
+  void echo(string);       // visualizza a video o salva su il valore una variabile
   int ifup(string);        // attiva la scheda wifi in una delle seguenti modalita'
                            // (c - client / a - acces point )
   void grep();             // ritorna la sottostringa estratta dal comando grep se
                            // impostato il paramatero --var
-  void lora();             // gestisce una scheda lora collegata alla board
+  void lora();             // gestisce una scheda lora collegata alla board ESP32
 
   /* UTILITY DI SHELL */
   void setMode(boolean __set__) { cfgshell.__mode__ = __set__; } // imposta la modalita' di shell
@@ -150,7 +183,13 @@ public:
   string row();                                                  // attiva l'input del comando
   string extract(string, string);                                // ritorna il valore di una regexp
   int dbg();                                                     // attiva disattiva il debug
-  void pin_push_back(string sName, int iValue) { myPIN[sName] = iValue; }
+  
+  /*
+  * Imposta i PIN della board
+  */
+  void pinSet(string sName, int iValue, int iMode) {   
+    pinMode(iValue, iMode);
+    myPIN[sName] = iValue; }
 
   /* Utility della matrice dei Flag */
   void flag(string, string);                                                             // costruisce la matrice dei flag

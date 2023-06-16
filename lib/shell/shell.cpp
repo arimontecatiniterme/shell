@@ -59,23 +59,6 @@ shell::shell()
 
   // pulisce il vettore delle variabili
   aVar.clear();
-
-  // inizializza il vettore delle configurazioni di LoRa
-  // LoRaMode.push_back({M0,M1,nome modo});
-  LoRaMode.push_back({1, 1, "program"}); /* modo programmazione */
-  LoRaMode.push_back({0, 0, "txrx"});    /* modo txrx */
-  LoRaMode.push_back({0, 1, "psave"});   /* modo power saved */
-  LoRaMode.push_back({1, 0, "wakeup"});  /* modo tx segnale di wakeup*/
-
-  /*
-   * modella una scheda di tipo LoRa
-   */
-
-  // inizializza la variabile della scheda LoRa
-  LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
-
-  // Startup all pins and UART
-  e220ttl.begin();
 }
 
 /* attiva disattiva il debug  */
@@ -1429,7 +1412,7 @@ boolean shell::start(string __cmd__)
 
           /*
            * quando la shell viene avviata in modo trasparente e vi e' un unico comando da eseguire
-           * si disabilita l'ambiente di shell di modo che alla fine dell'esecuzione del comando il metodo viene 
+           * si disabilita l'ambiente di shell di modo che alla fine dell'esecuzione del comando il metodo viene
            * abbandonato.
            */
           cfgshell.__mode__ = false;
@@ -1589,7 +1572,7 @@ boolean shell::start(string __cmd__)
 
     else if (result.str(0) == "lora")
     { // esecuzione del comando ( comando interno )
-      shell::flag("((--(read|mode|send|rconf))|<<|>>|>)", cfgshell.__row__);
+      shell::flag("((--(set|rconf|mode|init))|<<|>>|>)", cfgshell.__row__);
       shell::lora();
       cfgshell.__row__ = "";
       shell::cleanFlag();
@@ -1646,124 +1629,39 @@ void shell::lora()
 
   smatch result;
 
-  if ((shell::readFlag("<<")).size() > 0)
+  __PRTDBG__
+
+  if ((shell::readFlag("--set")).size() > 0)
   {
-    /* apertura del file in modo lettura */
-    FO = shell::s2S(shell::getPath() + shell::readFlag("<<"));
-    __PRTVAR__("<<", shell::getPath() + shell::readFlag("<<"))
-
-    if (SPIFFS.exists(FO))
-    {
-      pFileIN = SPIFFS.open(FO);
-      regex m("(mode)( ){0,}(=)( ){0,}[psave|program|txrx|wakeup]");
-      regex t("(tx)( ){0,}(=)( ){0,}[\\w ]+");
-
-      while (pFileIN.available())
-      {
-        /* legge la riga del file di input e la converte in una stringa del C++ */
-        sRow = S2s(pFileIN.readStringUntil('\n'));
-
-        /* verifica se la stringa letta sia la struttura per l'impostazione dei PIN M0 e M1 */
-        regex_search(sRow, result, m);
-        if ((result.str(0)).size())
-        {
-          sMode = result.str(0);
-        }
-
-        /* verifica se la stringa contiene un messaggio da trasmettere */
-        regex_search(sRow, result, t);
-        if ((result.str(0)).size())
-        {
-          sTX = result.str(0);
-        }
-      }
-    }
-  }
-  else
-  {
-    sMode = shell::readFlag("--mode");
-    sTX = shell::readFlag("--tx");
-    __PRTDBG__
+    __PRTDBG__("flag", shell::readFlag("--set"));
+    shell::LoRaParseConf(shell::readFlag("--set"));
   }
 
-  __PRTVAR__("mode", sMode)
-  __PRTVAR__("tx", sTX)
-
-  /* Eventuale impostazione dei pin M0 e M1 */
-  if (sMode.size() > 0)
+  if ((shell::readFlag("--init")).size() > 0)
   {
-    /*
-     *se e' stato richiesto di impostare un modo di funzionamento della sheda LoRa
-     * si ricerca la configurazione richiesta all' interno dell'array
-     * LoRaMode
-     */
-    boolean bFound = false;
-    auto it = LoRaMode.begin();
-    int iIndex = 0;
-    while (it != LoRaMode.end() && !bFound)
-    {
-      if (it->sName == sMode)
-      /*
-       * Se il parametro passato al flag mode e' un parametro valido, cioe'
-       * se al nome corrisponde una coppia di valori nell'array LoraMode allora
-       * si impostano i rispettivi valori nella struttura myLoRa che modella la board
-       * in uso e posi si settano i ripettivi PIN.
-       *
-       */
-      {
-
-        bFound = true;
-        digitalWrite(myPIN["M0"], it->iM0);
-        digitalWrite(myPIN["M1"], it->iM1);
-
-        __PRTVAR__("M0", digitalRead(myPIN["M0"]))
-        __PRTVAR__("M1", digitalRead(myPIN["M1"]))
-      }
-
-      else
-      {
-        it++;
-      }
-    }
+    __PRTDBG__("flag", shell::readFlag("--init"));
+    // e220ttl = shell::LoRaInit();
   }
-
-  if (sTX.size() > 0)
-  {
-    __PRTVAR__("...invio messaggio...", "")
-  }
-
-  // shell::printFlag();
-
-  __PRTVAR__("--readconf", shell::readFlag("--rconf"))
 
   if ((shell::readFlag("--rconf")).size() > 0)
   {
-
-    shell::LoRaReadConf("");
+    __PRTDBG__("flag", shell::readFlag("--rconf"));
+    shell::LoRaReadConf();
   }
-}
-
-/*
- * Inizializza la scheda LoRa
- */
-void shell::LoRaInit()
-{
-
-  LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
 }
 
 /*
  * Legge la configurazione della scheda LoRa
  */
-void shell::LoRaReadConf(string __cmd__)
+void shell::LoRaReadConf()
 {
 
   String FO;
   String sMODE;
   File pFILE;
 
-  Serial2.setPins(myPIN["TX"], myPIN["RX"]); // Arduino RX <-- e220 TX, Arduino TX --> e220 RX
-  LoRa_E220 e220ttl(&Serial2, myPIN["AUX"], myPIN["M0"], myPIN["M1"]);
+  Serial2.setPins(shell::myPIN["TX"], shell::myPIN["RX"]); // Arduino RX <-- e220 TX, Arduino TX --> e220 RX
+  LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
 
   e220ttl.begin();
 
@@ -1797,6 +1695,7 @@ void shell::LoRaReadConf(string __cmd__)
   {
     __PRTDBG__
 
+    pFILE.println("");
     pFILE.println(c.status.getResponseDescription());
     pFILE.println(c.status.code);
     pFILE.println("----------------------------------------");
@@ -1957,5 +1856,243 @@ void shell::LoRaReadConf(string __cmd__)
     Serial.print(F("Features : "));
     Serial.println(mi.features, DEC);
     Serial.println("----------------------------------------");
+  }
+}
+
+/*
+ * void LoraSetConf()  imposta una configurazione per la board LoRa
+ *
+ * Parametri ammessi :
+ *
+ *
+ */
+void shell::LoRaParseConf(string __cmd__)
+{
+
+  int iPOS;
+  string sValue;
+  string sName;
+
+  __PRTVAR__("__cmd__", __cmd__)
+
+  // pattern di ricerca
+  regex patternSET("((addl|addh|ch|uartbr|uartp|airdata|packet|rnoise|tpow|re|ftx|lbt|wor|save)=[\\w]*)");
+
+  // Oggetti iterator per iterare sulle corrispondenze
+  std::sregex_iterator iteratore(__cmd__.begin(), __cmd__.end(), patternSET);
+  std::sregex_iterator fineIteratore;
+
+  // Iterare sulle corrispondenze
+  while (iteratore != fineIteratore)
+  {
+    std::smatch corrispondenza = *iteratore;
+    std::string parola = corrispondenza.str();
+
+    iPOS = parola.find("=", 0);
+    sName = parola.substr(0, iPOS);
+    sValue = parola.substr(iPOS + 1, parola.length());
+    shell::LoRaSetConf(sName, sValue);
+
+    __PRTVAR__("sName", sName)
+    __PRTVAR__("sValue", sValue)
+
+    ++iteratore;
+  }
+}
+
+/*
+ * Imposta la configurazione della board LoRa
+ */
+void shell::LoRaSetConf(string sVar, string sVal)
+{
+
+  /*
+   * Definisce la mappa dei valori della velocita' della UART
+   */
+  std::map<std::string, int> uartb;
+
+  uartb["UART_BPS_1200"] = UART_BPS_1200;
+  uartb["UART_BPS_2400"] = UART_BPS_2400;
+  uartb["UART_BPS_4800"] = UART_BPS_4800;
+  uartb["UART_BPS_9600"] = UART_BPS_9600;
+  uartb["UART_BPS_19200"] = UART_BPS_19200;
+  uartb["UART_BPS_38400"] = UART_BPS_38400;
+  uartb["UART_BPS_57600"] = UART_BPS_57600;
+  uartb["UART_BPS_115200"] = UART_BPS_115200;
+
+  /*
+   * Definisce la mappa della parita' della porta UART
+   */
+  std::map<std::string, int> uartp;
+
+  uartp["MODE_00_8N1"] = MODE_00_8N1;
+  uartp["MODE_01_8O1"] = MODE_01_8O1;
+  uartp["MODE_10_8E1"] = MODE_10_8E1;
+  uartp["MODE_11_8N1"] = MODE_11_8N1;
+
+  /*
+   * definisce la mappa delle opzioni della vecolita' di trasmissione
+   */
+
+  std::map<std::string, int> air;
+
+  air["AIR_DATA_RATE_000_24"] = AIR_DATA_RATE_000_24;
+  air["AIR_DATA_RATE_001_24"] = AIR_DATA_RATE_001_24;
+  air["AIR_DATA_RATE_010_24"] = AIR_DATA_RATE_010_24;
+  air["AIR_DATA_RATE_011_48"] = AIR_DATA_RATE_011_48;
+  air["AIR_DATA_RATE_100_96"] = AIR_DATA_RATE_100_96;
+  air["AIR_DATA_RATE_101_192"] = AIR_DATA_RATE_101_192;
+  air["AIR_DATA_RATE_110_384"] = AIR_DATA_RATE_110_384;
+  air["AIR_DATA_RATE_111_625"] = AIR_DATA_RATE_111_625;
+
+  /*
+   * Imposta la dimensione del pacchetto trasmesso
+   */
+  std::map<std::string, int> packet;
+
+  packet["SPS_200_00"] = SPS_200_00;
+  packet["SPS_128_01"] = SPS_128_01;
+  packet["SPS_064_10"] = SPS_064_10;
+  packet["SPS_032_11"] = SPS_032_11;
+
+  /*
+   * imposta la gestione del rumore di fondo
+   */
+  std::map<std::string, int> rssi;
+
+  rssi["RSSI_AMBIENT_NOISE_ENABLED"] = RSSI_AMBIENT_NOISE_ENABLED;
+  rssi["RSSI_AMBIENT_NOISE_DISABLED"] = RSSI_AMBIENT_NOISE_DISABLED;
+
+  /*
+   * Impost la potenza di trasmissione
+   */
+  std::map<std::string, int> ptx;
+
+  ptx["POWER_22"] = POWER_22;
+  ptx["POWER_17"] = POWER_17;
+  ptx["POWER_13"] = POWER_13;
+  ptx["POWER_10"] = POWER_10;
+
+  /*
+   * Imposta il modo di funzionamento della scheda
+   */
+  std::map<std::string, int> mode;
+
+  mode["FT_FIXED_TRANSMISSION"] = FT_FIXED_TRANSMISSION;
+  mode["FT_TRANSPARENT_TRANSMISSION"] = FT_TRANSPARENT_TRANSMISSION;
+
+  /*
+   * Monitoraggio dei dati in trasmissione
+   */
+  std::map<std::string, int> mtx;
+
+  mtx["LBT_ENABLED"] = LBT_ENABLED;
+  mtx["LBT_DISABLED"] = LBT_DISABLED;
+
+  /*
+   * Impostazione della modalita wor
+   */
+  std::map<std::string, int> wor;
+
+  // wor["WAKE_UP_500"] = WAKE_UP_500;
+  // wor["WAKE_UP_1000"] = WAKE_UP_1000;
+  // wor["WAKE_UP_1500"] = WAKE_UP_1500;
+  // wor["WAKE_UP_2000"] = WAKE_UP_2000;
+  // wor["WAKE_UP_2500"] = WAKE_UP_2500;
+  // wor["WAKE_UP_3000"] = WAKE_UP_3000;
+  // wor["WAKE_UP_3500"] = WAKE_UP_3500;
+  // wor["WAKE_UP_4000"] = WAKE_UP_4000;
+
+  /*
+   * Bit di parita'
+   */
+  std::map<std::string, int> re;
+  re["RSSI_ENABLED"] = RSSI_ENABLED;
+  re["RSSI_DISABLED"] = RSSI_DISABLED;
+
+  /*
+   * Salva la configurazione
+   */
+  std::map<std::string, int> save;
+  save["YES"] = 1;
+  save["NO"] = 0;
+
+  Serial2.setPins(shell::myPIN["TX"], shell::myPIN["RX"]); // Arduino RX <-- e220 TX, Arduino TX --> e220 RX
+  LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
+
+  e220ttl.begin();
+
+  ResponseStructContainer c;
+  c = e220ttl.getConfiguration();
+  // It's important get configuration pointer before all other operation
+  Configuration config = *(Configuration *)c.data;
+
+  Serial.println(c.status.getResponseDescription());
+  Serial.println(c.status.code);
+
+  if (sVar == "addl")
+  {
+    config.ADDL = stoi(sVal);
+  }
+  else if (sVar == "addh")
+  {
+    config.ADDH = stoi(sVal);
+  }
+  else if (sVar == "ch")
+  {
+    config.CHAN = stoi(sVal);
+  }
+  else if (sVar == "uartb")
+  {
+    config.SPED.uartBaudRate = uartb[sVar];
+  }
+  else if (sVar == "uartp")
+  {
+    config.SPED.uartParity = uartp[sVal];
+  }
+  else if (sVar == "airdata")
+  {
+    config.SPED.airDataRate = air[sVal];
+  }
+  else if (sVar == "paket")
+  {
+    config.OPTION.subPacketSetting = packet[sVal];
+  }
+  else if (sVar == "rnoise")
+  {
+    config.OPTION.RSSIAmbientNoise = rssi[sVal];
+  }
+  else if (sVar == "tpow")
+  {
+    config.OPTION.transmissionPower = ptx[sVal];
+  }
+  else if (sVar == "re")
+  {
+  }
+  else if (sVar == "ftx")
+  {
+    config.TRANSMISSION_MODE.fixedTransmission = mode[sVal];
+  }
+  else if (sVar == "lbt")
+  {
+    config.TRANSMISSION_MODE.enableLBT = mtx[sVal];
+  }
+  else if (sVar == "wor")
+  {
+    config.TRANSMISSION_MODE.WORPeriod = wor[sVal];
+  }
+
+  // Set configuration changed and set to not hold the configuration
+  if (save[sVal])
+  {
+    ResponseStatus rs = e220ttl.setConfiguration(config, WRITE_CFG_PWR_DWN_SAVE);
+    Serial.println(rs.getResponseDescription());
+    Serial.println(rs.code);
+  }
+  else
+  {
+    ResponseStatus rs = e220ttl.setConfiguration(config, WRITE_CFG_PWR_DWN_LOSE);
+    Serial.println(rs.getResponseDescription());
+    Serial.println(rs.code);
   }
 }

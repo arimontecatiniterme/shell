@@ -189,18 +189,18 @@ void setup()
   Serial.println("Serial is ready to accept input");
 
   /* imposta il modo dei PIN */
-  pinMode(BUTTON, INPUT);
-  pinMode(M0, OUTPUT);
-  pinMode(M1, OUTPUT);
-  pinMode(AUX, OUTPUT);
+  // pinMode(BUTTON, INPUT);
+  // pinMode(M0, OUTPUT);
+  // pinMode(M1, OUTPUT);
+  // pinMode(AUX, OUTPUT);
 
   /* costruisce l'array dei PIN */
-  sh.pin_push_back("BUTTON", BUTTON);
-  sh.pin_push_back("M0", M0);
-  sh.pin_push_back("M1", M1);
-  sh.pin_push_back("AUX", AUX);
-  sh.pin_push_back("TX", TX);
-  sh.pin_push_back("RX", RX);
+  sh.pinSet("BUTTON", BUTTON, INPUT);
+  sh.pinSet("M0", M0, OUTPUT);
+  sh.pinSet("M1", M1, OUTPUT);
+  sh.pinSet("AUX", AUX, OUTPUT);
+  sh.pinSet("TX", TX, OUTPUT);
+  sh.pinSet("RX", RX, OUTPUT);
 
   /* inizializza il filesystem */
   Serial.print(F("Inizializing FS..."));
