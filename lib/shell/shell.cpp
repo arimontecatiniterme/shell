@@ -1572,7 +1572,7 @@ boolean shell::start(string __cmd__)
 
     else if (result.str(0) == "lora")
     { // esecuzione del comando ( comando interno )
-      shell::flag("((--(set|rconf|mode|init))|<<|>>|>)", cfgshell.__row__);
+      shell::flag("((--(set|rconf|mode))|<<|>>|>)", cfgshell.__row__);
       shell::lora();
       cfgshell.__row__ = "";
       shell::cleanFlag();
@@ -1620,7 +1620,7 @@ void shell::lora()
 {
 
   File pFileIN;
-  String FO;
+  String sFO, sFI;
 
   string sRow;
   string sMode;
@@ -1631,18 +1631,41 @@ void shell::lora()
 
   __PRTDBG__
 
-  if ((shell::readFlag("--set")).size() > 0)
+  if ((shell::readFlag("<<")).size() > 0)
+  {
+
+    __PRTVAR__("file", shell::cfgshell.__cur_path__ + shell::readFlag("<<"))
+    sFI = s2S(shell::cfgshell.__cur_path__ + shell::readFlag("<<"));
+
+    if (SPIFFS.exists(sFI))
+    {
+      __PRTDBG__
+
+      pFileIN = SPIFFS.open(sFI);
+
+      __PRTDBG__
+
+      while (pFileIN.available())
+      {
+        sRow = S2s(pFileIN.readStringUntil('\n'));
+        __PRTVAR__("row file", sRow)
+        shell::LoRaParseConf(sRow);
+        __PRTDBG__
+      }
+
+      pFileIN.close();
+
+    }
+  }
+  else if ((shell::readFlag("--set")).size() > 0)
   {
     __PRTDBG__("flag", shell::readFlag("--set"));
     shell::LoRaParseConf(shell::readFlag("--set"));
   }
 
-  if ((shell::readFlag("--init")).size() > 0)
-  {
-    __PRTDBG__("flag", shell::readFlag("--init"));
-    // e220ttl = shell::LoRaInit();
-  }
-
+  /*
+   * configurazione della scheda
+   */
   if ((shell::readFlag("--rconf")).size() > 0)
   {
     __PRTDBG__("flag", shell::readFlag("--rconf"));
@@ -2017,10 +2040,19 @@ void shell::LoRaSetConf(string sVar, string sVal)
   save["YES"] = 1;
   save["NO"] = 0;
 
+  __PRTDBG__
+
   Serial2.setPins(shell::myPIN["TX"], shell::myPIN["RX"]); // Arduino RX <-- e220 TX, Arduino TX --> e220 RX
+
+  __PRTDBG__
+
   LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
 
+  __PRTDBG__
+
   e220ttl.begin();
+
+  __PRTDBG__
 
   ResponseStructContainer c;
   c = e220ttl.getConfiguration();
@@ -2095,4 +2127,5 @@ void shell::LoRaSetConf(string sVar, string sVal)
     Serial.println(rs.getResponseDescription());
     Serial.println(rs.code);
   }
+
 }

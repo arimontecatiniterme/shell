@@ -134,9 +134,8 @@ private:
    * effettua il parsing delle opzioni passate da linea di comando oppure lette da file
    * per ogni opzione valida richiama il metodo LoRaSetConf per l'impostazione
    */
-  void LoRaParseConf();                       // effetua la scansione delle opzioni
-  void LoRaParseConf(string);     // imposta una configurazione di memoria
-  void LoRaReadConf();      // Legge la Configurazione di una board
+  void LoRaParseConf(string);                       // effetua la scansione delle opzioni
+  void LoRaReadConf();                              // Legge la Configurazione di una board
   void LoRaSetConf(string, string);
 
   // FUNZIONI DI UTILITA' DELLA CLASSE SHELL
