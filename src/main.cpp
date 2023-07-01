@@ -78,17 +78,10 @@
 /*
  * Importazione delle librerie specifiche per ESP 32
  */
-#include <Arduino.h>   // Libreria standard di Arduino
-#include <FS.h>        // Libreria per le funzionalita del file system
-#include <SPIFFS.h>    /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
-#include <WebServer.h> /* libreria per la gestione del webserver */
-#include <WiFi.h>      /* libreria per la gestione del modulo wifi */
-
-/*
- * Importazione delle librerie di terze parti
- * Libreria di utility per la gestione di una board LoRa scritta da Renzo Mischianti https://www.mischianti.org/
- */
-#include "LoRa_E220.h"
+#include <Arduino.h> // Libreria standard di Arduino
+#include <FS.h>     // Libreria per le funzionalita del file system
+#include <SPIFFS.h> /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
+#include <WiFi.h>   /* libreria per la gestione del modulo wifi */
 
 /*
  * librerie specifiche del progetto path ./lib/.....
@@ -96,12 +89,6 @@
 #include "input.h" /* simula l'input da riga di comando sulla porta seriale */
 #include "shell.h" /* mette a disposizione una shell utilizzabile con la seriale oppure in modo trasparente */
 
-/*
- * librerie standard del C++
- */
-#include <iostream>
-#include <string>
-#include <vector>
 
 /* Associazione dei PIN della ESP32 alla board LoRa
  * G21    -->     M0
@@ -219,15 +206,19 @@ void setup()
   myBoard.__cgffile__ = "config.ini"; // file di configurazione del sw
   myBoard.__sCmd__ = "";
   myBoard.bshMode = true;
+
 }
 
 void loop()
 {
+
   // alla pressione del tasto BUTTON
-  myBoard.bshMode = sh.start("ls -d");
-  Serial.println("####");
-  myBoard.bshMode = sh.start("ls -d|cat");
-  Serial.println("####");
+  // myBoard.bshMode = sh.start("ls -d");
+  // Serial.println("####");
+  // myBoard.bshMode = sh.start("ls -d|cat");
+  // Serial.println("####");
+  // myBoard.bshMode = sh.start("lora --rconf 0");
+  // Serial.println("####");
 
   myBoard.bshMode = sh.start("");
 

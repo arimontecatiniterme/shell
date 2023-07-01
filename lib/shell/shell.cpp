@@ -56,6 +56,7 @@ shell::shell()
   cfgshell.__row__ = "";
   cfgshell.__pipe__ = "";
   cfgshell.__temp__ = "";
+  cfgshell.__btf__ = "";
 
   // pulisce il vettore delle variabili
   aVar.clear();
@@ -1373,12 +1374,12 @@ boolean shell::start(string __cmd__)
   srand(time(NULL));
 
   /* regole di estrazione dei comandi */
-  regex r("^([ ]{0,}(ls|cp|grep|set|echo|format|edlin|rm|mv|exit|cls|ifup|help|cat|lora))");
-  /* status :         |  |   |    |  |   |  |   |     |   |   |    |   |    | */
-  /*                 OK  |   |    | OK   |  |   |     |   |   |    OK  |    */
-  /*                    OK   |    |     OK  |   |     |   |   OK       | */
-  /*                        OK    |        OK  OK     |   OK           | */
-  /*                              OK                  OK               OK  */
+  regex r("^([ ]{0,}(ls|cp|grep|set|echo|format|edlin|rm|mv|exit|cls|ifup|help|cat|lora|bt))");
+  /*                  |  |   |    |  |   |  |   |     |   |   |    |   |   |    |   |    |  */
+  /*                 OK  |   |    | OK   |  |   |     |   |   |    OK  |   |    OK  |    OK */
+  /*                    OK   |    |     OK  |   |     |   |   OK       |   OK       OK      */
+  /*                        OK    |        OK  OK     |   OK           |                    */
+  /*                              OK                  OK               OK                   */
 
   /* regole di estrazione del nome del file */
   regex f("([~\\w.]+)$");
@@ -1469,7 +1470,6 @@ boolean shell::start(string __cmd__)
           iAux++;
         }
       }
-
     } while (!regex_search(cfgshell.__row__, result, r));
 
     __PRTVAR__("command", cfgshell.__row__)
@@ -1572,8 +1572,16 @@ boolean shell::start(string __cmd__)
 
     else if (result.str(0) == "lora")
     { // esecuzione del comando ( comando interno )
-      shell::flag("((--(set|rconf|mode))|<<|>>|>)", cfgshell.__row__);
+      shell::flag("((--(set|rconf|mode|username))|<<|>>|>)", cfgshell.__row__);
       shell::lora();
+      cfgshell.__row__ = "";
+      shell::cleanFlag();
+    }
+
+    else if (result.str(0) == "bt")
+    { // esecuzione del comando ( comando interno )
+      shell::flag("((--(set|send|listening|rconf)))", cfgshell.__row__);
+      shell::bt();
       cfgshell.__row__ = "";
       shell::cleanFlag();
     }
@@ -1654,7 +1662,6 @@ void shell::lora()
       }
 
       pFileIN.close();
-
     }
   }
   else if ((shell::readFlag("--set")).size() > 0)
@@ -1670,6 +1677,14 @@ void shell::lora()
   {
     __PRTDBG__("flag", shell::readFlag("--rconf"));
     shell::LoRaReadConf();
+  }
+
+  /*
+   * Imposta il nome utente di un messaggio LoRa
+   */
+  if ((shell::readFlag("--username")).size() > 0)
+  {
+    shell::set(" username=" + shell::readFlag("--username"));
   }
 }
 
@@ -2127,5 +2142,107 @@ void shell::LoRaSetConf(string sVar, string sVal)
     Serial.println(rs.getResponseDescription());
     Serial.println(rs.code);
   }
+}
 
+/*
+ * void bt()  gestione del bt
+ *
+ * Parametri ammessi :
+ *
+ *
+ */
+void shell::bt()
+{
+
+  char cCH;
+  string sMode;
+  string sFile;
+  File pFile;
+
+  /*
+   * Imposta la scheda bluetooth
+   */
+  if ((shell::readFlag("--set")).size() > 0)
+  {
+    // shell::BTSerial.begin(9600);
+    shell::BTSerial.begin(s2S(shell::readFlag("--set")));
+  }
+
+  /*
+   * Invia un messaggio sulla seriale bluetooth
+   */
+  if ((shell::readFlag("--send")).size() > 0)
+  {
+    shell::BTSerial.println(s2S(shell::readFlag("--send")).c_str());
+  }
+
+  /*
+   * Legge i dati ricevuti
+   */
+  __PRTVAR__("file", shell::readFlag("--listening"))
+
+  if ((shell::readFlag("--listening")).size() > 0)
+  {
+    __PRTDBG__
+
+    smatch result;
+    regex fo("((>>)( )*[\\w.-_!~]+)");
+
+    /*
+     * controlla se l'output deve essere accodato a file
+     */
+    if (regex_search(sFile, result, fo))
+    {
+      __PRTDBG__
+      sMode = "+a";
+      regex file("(([\\w.-_!~]+)$)");
+      string sData = result.str(0);
+      __PRTVAR__("sData", sData)
+      regex_search(sData, result, file);
+      sFile = result.str(0);
+    }
+    else
+    {
+      /*
+       * Controlla se l'output deve sovrascrivere il contenuto di un file
+       */
+      regex fo("((>)( )*[\\w.-_!~]+)");
+      if (regex_search(sFile, result, fo))
+      {
+        __PRTDBG__
+        regex file("(([\\w.-_!~]+)$)");
+        string sData = result.str(0);
+        regex_search(sData, result, file);
+        sMode = "w";
+        sFile = result.str(0);
+      }
+    }
+    __PRTVAR__("file.size", sFile.size())
+
+    if (sFile.size() > 0)
+    {
+      String sFILE = s2S(shell::cfgshell.__cur_path__ + sFile);
+      pFile = SPIFFS.open(sFILE, sMode.c_str());
+    }
+
+
+    if (shell::BTSerial.available())
+    {
+      
+      std::cout << "\n";
+
+      while (shell::BTSerial.available())
+      {
+        String messaggio = shell::BTSerial.readStringUntil('\n');
+        if (pFile)
+        {
+          pFile.println(messaggio);
+        }
+        else
+        {
+          std::cout << S2s(messaggio) << "\n";
+        }
+      }
+    }
+  }
 }

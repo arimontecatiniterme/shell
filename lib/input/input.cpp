@@ -133,6 +133,10 @@ void input::read_Rx()
           Serial.print("*");
         }
       }
+
+      //
+
+
     } // fine del blocco di acquisizione dei caratteri
   }   // fine del blocco di lettura
 

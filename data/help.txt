@@ -83,7 +83,7 @@ lora - gestisce la configurazione / trasmissione di una scheda lora
               --ftx [FT_FIXED_TRANSMISSION|FT_TRANSPARENT_TRANSMISSION] : imposta la scheda per l utilizzo con indirizzo oppure in modo trasparente
               --lbt [LBT_ENABLED|LBT_DISABLED] : per evitare distorsioni monitora i dati inviati
               --wor [WAKE_UP_500|WAKE_UP_1000|WAKE_UP_1500|WAKE_UP_2000|WAKE_UP_2500|WAKE_UP_3000|WAKE_UP_3500|WAKE_UP_4000] :
-              --save [WRITE_CFG_PWR_DWN_SAVE|WRITE_CFG
+              --save [WRITE_CFG_PWR_DWN_SAVE|WRITE_CFG_PWR_DWN_LOSE] : salva o meno la configurazione sulla board LoRa
 
        --mode [program|txrx|psave|wakeup] imposta il modo di configurazione della board LoRa
               program - imposta {M0,M1}={1,1}
@@ -91,7 +91,8 @@ lora - gestisce la configurazione / trasmissione di una scheda lora
               psave -  imposta {M0,M1}={0,1}
               wakeup - imposta {M0,M1}={1,0}
 
+       --username [nome] imposta il nome utente da inviare con il messaggio LoRa
+
        << - carica da file la configurazione, la sintassi dei flag all' interno del file di input e' [var=var]
        [>>|>] :: output su file 
 
-_PWR_DWN_LOSE] : salva o meno la configurazione sulla board LoRa

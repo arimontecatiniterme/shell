@@ -13,12 +13,11 @@
 /*
  * include le librerie standard per ESP32
  */
-#include <Arduino.h>        /* si utilizza per gli oggetti String */
-#include <FS.h>             // Libreria per le funzionalita del file system
-#include <SPIFFS.h>         /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
-#include <SoftwareSerial.h> /* include la libreria per la personalizzazione della comunicazione seriale */
-#include <WebServer.h>      /* libreria per la gestione del webserver */
-#include <WiFi.h>           /* libreria per la gestione del modulo wifi */
+#include <Arduino.h>         /* si utilizza per gli oggetti String */
+#include <BluetoothSerial.h> /* libreria per la gestione BT */
+#include <FS.h>              // Libreria per le funzionalita del file system
+#include <SPIFFS.h>          /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
+#include <SoftwareSerial.h>  /* include la libreria per la personalizzazione della comunicazione seriale */
 
 /*
  * Importazione delle librerie di terze parti
@@ -29,13 +28,8 @@
 /*
  * include le librerie standard per C++
  */
-#include <algorithm>
-#include <fstream>
-#include <iostream>
 #include <map>
 #include <regex>
-#include <string>
-#include <tuple>
 #include <vector>
 
 /*
@@ -103,6 +97,7 @@ private:
     string __pipe__;     // nome del file di pipe
     string __mach__;     //
     string __temp__;     // variabile temporanea
+    string __btf__;      // nome del file di redirect
   } cfgshell;            // configurazione dell'ambiente di shell
 
   /* definisce la struttura della matrice dei flag per i comandi che lo prevedono */
@@ -125,6 +120,16 @@ private:
 
   /* vettore delle variabili di memoria */
   std::vector<memvar> aVar;
+
+  // Sending message as struct
+  struct ChatMessage
+  {
+    char user[20];
+    char message[250];
+  };
+
+  /* variabile */
+  BluetoothSerial BTSerial;
 
   /*
    * Funzioni private della classe shell
@@ -172,6 +177,9 @@ public:
   void grep();             // ritorna la sottostringa estratta dal comando grep se
                            // impostato il paramatero --var
   void lora();             // gestisce una scheda lora collegata alla board ESP32
+  void bt();               // gestisce la comunicazione bluetoothSerial
+
+
 
   /* UTILITY DI SHELL */
   void setMode(boolean __set__) { cfgshell.__mode__ = __set__; } // imposta la modalita' di shell
