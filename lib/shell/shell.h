@@ -120,6 +120,8 @@ private:
 
   /* vettore delle variabili di memoria */
   std::vector<memvar> aVar;
+  std::map<std::string, std::string> mVar;
+
 
   // Sending message as struct
   struct ChatMessage
@@ -127,6 +129,8 @@ private:
     char user[20];
     char message[250];
   };
+
+  struct ChatMessage messageLora;
 
   /* variabile */
   BluetoothSerial BTSerial;
@@ -141,7 +145,12 @@ private:
    */
   void LoRaParseConf(string);                       // effetua la scansione delle opzioni
   void LoRaReadConf();                              // Legge la Configurazione di una board
-  void LoRaSetConf(string, string);
+  void LoRaSetConf(string, string);                 // Imposta la configurazione di una board
+  void LoRaSend();                                  // Invia un messaggio
+  void LoRaRead();                                  // Legge un messaggio sulla scheda LoRa
+
+  string use(string);                               // ritorna il valore di una variabile
+
 
   // FUNZIONI DI UTILITA' DELLA CLASSE SHELL
   void s2IP(string, int[]);         // converte una stringa in un indirizzo IP
@@ -198,7 +207,7 @@ public:
     pinMode(iValue, iMode);
     myPIN[sName] = iValue; }
 
-  /* Utility della matrice dei Flag */
+  /* UTILITY DELLA MATRICE DEI FLAG */
   void flag(string, string);                                                             // costruisce la matrice dei flag
   void setFlag(string __sVal__, int __iIndex__) { aReg[__iIndex__].sFlag = __sVal__; }   // imposta il valore del flag dell'omonima matrice
   void setPos(int __iVal__, int __iIndex__) { aReg[__iIndex__].iPos = __iVal__; }        // imposta il valore della posizione del flag

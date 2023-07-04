@@ -58,22 +58,21 @@ shell::shell()
   cfgshell.__temp__ = "";
   cfgshell.__btf__ = "";
 
-  // pulisce il vettore delle variabili
-  aVar.clear();
+  // pulisce il vettore delle variabili e inizializza quelle d'ambiente
+  mVar.clear();
+  shell::set("set path=/");
+  shell::set("set debug=1");
+  shell::set("set << shell.ini");
 }
 
-/* attiva disattiva il debug  */
+/* controlla se e' attivo il debug  */
 int shell::dbg()
 {
-
   int debug = 0;
 
-  for (auto &innerVector : aVar)
+  if (shell::mVar["debug"] == "1")
   {
-    if (innerVector.name == "debug")
-    {
-      debug = std::stoi(innerVector.value);
-    }
+    debug = 1;
   }
 
   return debug;
@@ -1022,208 +1021,75 @@ string shell::extract(string __reg__, string __cmd__)
 //************************************************************/
 void shell::set(string __cmd__)
 {
-  string sName;
-  string sValue;
-  string sReg;
-  string sTemp;
-
-  string sFile;
-  String sFILE;
-  File pFILE;
-
-  char cMode; // a old var + new value
-              // b new value + old var
-              // d delete var
-              // m modify var
-
-  boolean bFoundVar = true;
-  boolean bFound = false;
-  boolean bCont = true;
 
   smatch result;
+  File pFile;
 
-  int iIndex = 0;
-  int iPos = 0;
-  int iStart = 0;
-  int iEnd = 0;
+  int iPos;
+  string sVar;
+  string sVal;
 
-  __PRTDBG__
-
-  // espressione del redirect
-  sReg = "(<<)( )*([\\w.-_]{0,}){1,}";
-  sFile = shell::trim(shell::extract(sReg, __cmd__));
-  if (sFile.size() > 0)
-    sFile = shell::trim(sFile.substr(2, sFile.size()));
-
-  __PRTVAR__("sFile", sFile)
-
-  if (sFile.size() > 0)
+  regex r("(<< ([\\w+\\.-@$&]*))");
+  if (regex_search(__cmd__, result, r))
   {
-    sFILE = shell::s2S(shell::getPath() + shell::trim(sFile));
-    if (SPIFFS.exists(sFILE))
+    regex f("(([\\w+\\.-@$&]*)$)");
+    regex_search(__cmd__, result, f);
+    string sFile = result.str(0);
+    if (SPIFFS.exists(s2S(mVar["path"] + sFile)))
     {
-      pFILE = SPIFFS.open(sFILE);
-      __cmd__ = shell::S2s(pFILE.readStringUntil('\n'));
+      pFile = SPIFFS.open(s2S(mVar["path"] + sFile));
     }
   }
 
+  regex vv("([\\w_\\-]+)( )*(=)( )*([\\w+\\.\\-@&_/ :;\\[\\]=\\(\\)\\|\\#\\.\\$\\{\\}\\?]*)");
+
   do
   {
-
-    /* combinazione del tipo $var;valore */
-    sReg = "[$][\\w.-_]+(;)[\\w.@\\[\\]-_\\+\?]*";
-    sTemp = shell::trim(shell::extract(sReg, __cmd__));
-    if (sTemp.size() > 0 && bFoundVar)
+    if (pFile)
     {
-      // estrazione del nome
-      sReg = "[$][\\w.-_]+(;)";
-      sName = shell::extract(sReg, sTemp);
-      sName = shell::trim(sName.substr(1, sName.size() - 2));
-
-      // estrazione valore variabile
-      sReg = "(;)[\\w.@\\[\\]-_\\+\?]*";
-      sValue = shell::extract(sReg, sTemp);
-      sValue = shell::trim(sValue.substr(1, sValue.size()));
-
-      __PRTVAR__("sTemp", sTemp)
-      __PRTVAR__("sName", sName)
-      __PRTVAR__("sValue", sValue)
-
-      if (sValue.size() > 0)
-      {
-        cMode = 'a';
-      }
-      else
-      {
-        cMode = 'q';
-      }
-
-      bFoundVar = false;
+      __cmd__.clear();
+      __cmd__ = S2s(pFile.readStringUntil('\n'));
+      shell::trim(__cmd__);
+      __PRTVAR__("riga letta", __cmd__)
     }
 
-    /* combinazione del tipo valore;$var */
-    sReg = "( )+[\\w.@\\[\\]-_\\+\?]+(;)[$][\\w.-_]+";
-    sTemp = shell::trim(shell::extract(sReg, __cmd__));
-    if (sTemp.size() > 0 && bFoundVar)
+    if (regex_search(__cmd__, result, vv))
     {
+      __cmd__ = result.str(0);
 
-      // estrazione del nome
-      sReg = "[$][\\w.-_]+";
-      sName = shell::extract(sReg, sTemp);
-      sName = shell::trim(sName.substr(1, sName.size()));
+      __PRTVAR__("__cmd__", __cmd__)
 
-      // estrazione valore variabile
-      sReg = "[\\w.@\\[\\]-_\\+\?]+(;)";
-      sValue = shell::extract(sReg, sTemp);
-      sValue = shell::trim(sValue.substr(0, sValue.size() - 1));
+      iPos = __cmd__.find("=", 0);
 
-      bFoundVar = false;
+      __PRTVAR__("iPos", iPos)
 
-      __PRTVAR__("sTemp", sTemp)
-      __PRTVAR__("sName", sName)
-      __PRTVAR__("sValue", sValue)
+      sVar = shell::trim(__cmd__.substr(0, iPos));
+      sVal = shell::trim(__cmd__.substr(iPos + 1, __cmd__.length()));
 
-      if (sValue.size() > 0)
+      __PRTVAR__("sVar", sVar)
+      __PRTVAR__("sVal", sVal)
+
+      auto insert = mVar.insert(std::make_pair(sVar, sVal));
+
+      if (!insert.second)
       {
-        cMode = 'b';
-      }
-      else
-      {
-        cMode = 'q';
-      }
-    }
-
-    /* combinazione del tipo var=valore */
-    sReg = "[\\w.]+( )*(=)( )*[\\w.@\\[\\]-_\\+\\?]*";
-    sTemp = shell::trim(shell::extract(sReg, __cmd__));
-    if (sTemp.size() > 0 && bFoundVar)
-    {
-      bFoundVar = false;
-
-      // estrazione del nome
-      sReg = "[\\w.]+( )*(=)";
-      sName = shell::extract(sReg, sTemp);
-      sName = shell::trim(sName.substr(0, sName.size() - 1));
-
-      // estrazione valore variabile
-      sReg = "(=)( )*[\\w.@\\[\\]-_\\+\\?]*";
-      sValue = shell::extract(sReg, __cmd__);
-      sValue = shell::trim(sValue.substr(1, sValue.size()));
-
-      __PRTVAR__("sTemp", sTemp)
-      __PRTVAR__("sName", sName)
-      __PRTVAR__("sValue", sValue)
-
-      if (sValue.size() == 0)
-      {
-        cMode = 'd';
-      }
-    }
-
-    /* aggiornamento del vettore delle variabili */
-
-    // ricerca della varibile
-    bFound = false;
-    auto it = aVar.begin();
-    iIndex = 0;
-    while (it != aVar.end() && !bFound)
-    {
-      if (it->name == sName)
-      {
-        bFound = true;
-      }
-      else
-      {
-        it++;
-      }
-    }
-
-    __PRTVAR__("cMode", cMode)
-
-    // aggiornamento del vettore
-    switch (cMode)
-    {
-    case 'a': /* old value + new value */
-      it->value = it->value + sValue;
-      break;
-
-    case 'b': /* new value + old value */
-      it->value = sValue + it->value;
-      break;
-
-    case 'd':
-      aVar.erase(aVar.begin() + std::distance(aVar.begin(), it));
-      break;
-
-    default:
-      if (it != aVar.end())
-      {
-        it->value = sValue;
-      }
-      else
-      {
-        if (sValue.size() > 0)
+        /* code */
+        __PRTVAR__("sVal.size()", sVal.size())
+        if (sVal.size() > 0)
         {
-          aVar.push_back({sName, sValue});
+          __PRTDBG__
+          mVar[sVar] = sVal;
+        }
+        else
+        {
+          __PRTDBG__
+
+          mVar.erase(sVar);
         }
       }
-
-      break;
     }
-
-    /* Esplorazione del file */
-    if (pFILE.available())
-    {
-      __cmd__ = shell::S2s(pFILE.readStringUntil('\n'));
-      bCont = true;
-      bFoundVar = true;
-    }
-    else
-    {
-      bCont = false;
-    }
-  } while (bCont);
-}
+  } while (pFile.available());
+} // end set
 
 //************************************************************/
 //
@@ -1238,108 +1104,84 @@ void shell::echo(string __cmd__)
 {
 
   String sFILE;
-  String sMode = "w";
-  File pFILE;
+  String sMode = "a+";
 
   string sOut;
   string sVar, sFile;
+  string sPattern = ">>";
+
+  boolean bTest = true;
+  boolean bAll = false;
 
   smatch result;
+  File pFILE;
 
-  __PRTDBG__
-  regex q("((\\$)[\\w.-_]+)");
-  if (regex_search(__cmd__, result, q))
-  {
-    __PRTDBG__
-    sVar = result.str(0);
-    sVar = shell::trim(sVar.substr(1, sVar.size()));
-  }
-  else
-  {
-    sVar = "";
-  }
+  int iAux = 0;
 
-  __PRTDBG__
-  regex w("((>>)( )*[\\w.-_!~]+)");
-  __PRTDBG__
-  if (regex_search(__cmd__, result, w))
+  while (bTest && iAux <= 1)
   {
-    __PRTDBG__
-    sFile = result.str(0);
-    sFile = shell::trim(cfgshell.__cur_path__ + shell::trim(sFile.substr(2, sFile.size())));
-    sFILE = shell::s2S(sFile);
-    sMode = "a+";
-    __PRTVAR__("sFile", sFile)
-  }
-  else
-  {
-    regex w("((>)( )*[\\w.-_!~]+)");
-    if (regex_search(__cmd__, result, w))
+    regex f("(" + sPattern + ")( )*([\\w+\\.-@&_]*)");
+
+    __PRTVAR__("f", "(" + sPattern + ")( )*([\\w+\\.-@&_]*)")
+
+    if (regex_search(__cmd__, result, f))
     {
-      sFile = result.str(0);
-      sFile = shell::trim(cfgshell.__cur_path__ + shell::trim(sFile.substr(1, sFile.size())));
-      sFILE = shell::s2S(sFile);
-      sMode = "w";
-      __PRTVAR__("sFile", sFile)
-    }
-    else
-    {
-      sFile = "";
-    }
-  }
-
-  int iVar = sVar.size();
-  int iFile = sFile.size();
-  int iPos = 0;
-
-  __PRTDBG__
-
-  // apertura del file di output con la modalita' prevista dall'operatore di reidirizzamento.
-  if (iFile > 0)
-  {
-    if (!(pFILE = SPIFFS.open(sFILE.c_str(), sMode.c_str())))
-    {
-      return;
-    }
-  }
-
-  // esplorazione del vettore delle variabili
-  for (auto &innerVector : aVar)
-  {
-    if (iVar > 0)
-    {
-      if (innerVector.name == sVar)
+      regex file("([\\w+\\.-@&_]*)$");
+      if (regex_search(__cmd__, result, file))
       {
+        __PRTVAR__("result.str(0)", result.str(0))
 
-        sOut = innerVector.name + "=" + innerVector.value;
-        if (pFILE)
-        {
-          pFILE.println(s2S(sOut));
-        }
-        else
-        {
-          std::cout << "\n"
-                    << sOut;
-        }
+        sFILE = s2S(mVar["path"] + result.str(0));
+        pFILE = SPIFFS.open(sFILE, sMode.c_str());
+        bTest = false;
+        bAll = true;
       }
     }
-    else
+    sPattern = ">";
+    sMode = "w";
+    iAux++;
+  }
+
+  regex r("[$]([\\w+\\.-@&]*)");
+  if (regex_search(__cmd__, result, r) && !bAll)
+  {
+    __PRTDBG__
+
+    regex v("([\\w+\\.-@&]*)$");
+    if (regex_search(__cmd__, result, v))
     {
-      sOut = innerVector.name + "=" + innerVector.value;
+      __PRTDBG__
+
       if (pFILE)
       {
-        pFILE.println(s2S(sOut));
+        pFILE.println(s2S(result.str(0) + "=" + mVar[result.str(0)]));
       }
       else
       {
         std::cout << "\n"
-                  << sOut;
+                  << result.str(0) << "=" << mVar[result.str(0)] << "\n";
+      }
+    }
+  }
+  else
+  {
+    __PRTDBG__
+    std::cout << "\n";
+    for (const auto &pair : mVar)
+    {
+
+      if (pFILE)
+      {
+        pFILE.println(s2S(pair.first + "=" + pair.second));
+      }
+      else
+      {
+        std::cout << pair.first << "=" << pair.second << std::endl;
       }
     }
   }
 
-  pFILE.close();
-}
+} // end echo
 
 //************************************************************/
 //
@@ -1572,7 +1414,7 @@ boolean shell::start(string __cmd__)
 
     else if (result.str(0) == "lora")
     { // esecuzione del comando ( comando interno )
-      shell::flag("((--(set|rconf|mode|username))|<<|>>|>)", cfgshell.__row__);
+      shell::flag("((--(set|rconf|mode|username|send))|<<|>>|>)", cfgshell.__row__);
       shell::lora();
       cfgshell.__row__ = "";
       shell::cleanFlag();
@@ -1580,7 +1422,7 @@ boolean shell::start(string __cmd__)
 
     else if (result.str(0) == "bt")
     { // esecuzione del comando ( comando interno )
-      shell::flag("((--(set|send|listening|rconf)))", cfgshell.__row__);
+      shell::flag("((--(set|send|read))|<<|(>>|>))", cfgshell.__row__);
       shell::bt();
       cfgshell.__row__ = "";
       shell::cleanFlag();
@@ -1684,7 +1526,141 @@ void shell::lora()
    */
   if ((shell::readFlag("--username")).size() > 0)
   {
+    __PRTDBG__
     shell::set(" username=" + shell::readFlag("--username"));
+  }
+
+  /*
+   * Invia un messaggio in modo fixed
+   */
+  if ((shell::readFlag("--send")).size())
+  {
+    __PRTDBG__
+    shell::set("message=" + shell::readFlag("--send"));
+    shell::LoRaSend();
+  }
+}
+
+/*
+ * Metodo per l'invio dei messaggi su LoRa
+ */
+void shell::LoRaSend()
+{
+
+  __PRTDBG__
+
+  String sMESSAGE = s2S(mVar["message"]);
+  String sUSERNAME = s2S(mVar["username"]);
+
+  Serial2.setPins(shell::myPIN["TX"], shell::myPIN["RX"]); // Arduino RX <-- e220 TX, Arduino TX --> e220 RX
+  LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
+
+  e220ttl.begin();
+
+  if (mVar["loramode"] == "FIXED")
+  {
+    __PRTDBG__
+
+    /* calola la dimesione reale del messaggio e del nome utente */
+    int strLenByteMessage = (sMESSAGE.length() + 1) * sizeof(char); // null char
+    int strLenByteUser = (sUSERNAME.length() + 1) * sizeof(char);   // null char
+
+    /* controlla se la dimensione del messaggio non ecceda quella riservata in struttura */
+    if (strLenByteMessage > (sizeof(messageLora.message) / sizeof(messageLora.message[0])))
+    {
+      __PRTDBG__
+
+      // message is longher than the buffer
+      sMESSAGE.toCharArray(messageLora.message, ((sizeof(messageLora.message) / sizeof(messageLora.message[0])) - 1));
+    }
+    else
+    {
+      __PRTDBG__
+
+      // message is SHORTER than the buffer
+      sMESSAGE.toCharArray(messageLora.message, sMESSAGE.length() + 1);
+    }
+
+    /* controlla se la dimensione dell username non ecceda quella riservata in struttura */
+    if (strLenByteMessage > (sizeof(messageLora.message) / sizeof(messageLora.message[0])))
+    {
+      __PRTDBG__
+
+      // username is longher than the buffer
+      sUSERNAME.toCharArray(messageLora.user, ((sizeof(messageLora.user) / sizeof(messageLora.user[0])) - 1));
+    }
+    else
+    {
+      __PRTDBG__
+
+      // username is SHORTER than the buffer
+      sMESSAGE.toCharArray(messageLora.message, sMESSAGE.length() + 1);
+    }
+
+    __PRTDBG__
+
+    ResponseStatus rs = e220ttl.sendBroadcastFixedMessage(atoi((mVar["ch"]).c_str()), &sMESSAGE, (uint8_t)sizeof(struct ChatMessage));
+    rs.getResponseDescription();
+    std::cout << ("\nMessage send: " + rs.getResponseDescription()).c_str();
+
+    __PRTDBG__
+  }
+  else
+  { // trasmisisone in modo non FIXED
+
+    __PRTDBG__
+
+    ResponseStatus rs = e220ttl.sendBroadcastFixedMessage(atoi((mVar["ch"]).c_str()), sMESSAGE);
+    rs.getResponseDescription();
+    std::cout << ("\nMessage send: " + rs.getResponseDescription()).c_str();
+  }
+
+} // end LoraSend
+
+/*
+ * Legge un messaggio giunto sulla scheda LoRa
+ */
+void shell::LoRaRead()
+{
+
+  Serial2.setPins(shell::myPIN["TX"], shell::myPIN["RX"]); // Arduino RX <-- e220 TX, Arduino TX --> e220 RX
+  LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
+
+  e220ttl.begin();
+
+  if (mVar["loramode"] == "FIXED")
+  {
+
+    ResponseStructContainer rsc = e220ttl.receiveMessage((uint8_t)sizeof(struct ChatMessage));
+
+    // Is something goes wrong print error
+    if (rsc.status.code != 1)
+    {
+      std::cout << rsc.status.getResponseDescription() << "\n";
+    }
+    else
+    {
+      // Print the data received
+      shell::ChatMessage sMessage = *(struct ChatMessage *)rsc.data;
+      std::cout << sMessage.user << "/" << sMessage.message << "\n";
+    }
+  }
+  else
+  {
+
+    // read the String message
+    ResponseContainer rc = e220ttl.receiveMessage();
+
+    // Is something goes wrong print error
+    if (rc.status.code != 1)
+    {
+      rc.status.getResponseDescription();
+    }
+    else
+    {
+      // Print the data received
+      std::cout << rc.data << "\n";
+    }
   }
 }
 
@@ -1914,7 +1890,7 @@ void shell::LoRaParseConf(string __cmd__)
   __PRTVAR__("__cmd__", __cmd__)
 
   // pattern di ricerca
-  regex patternSET("((addl|addh|ch|uartbr|uartp|airdata|packet|rnoise|tpow|re|ftx|lbt|wor|save)=[\\w]*)");
+  regex patternSET("(( )*(addl|addh|ch|uartbr|uartp|airdr|packet|rnoise|tpow|re|ftx|lbt|wor|save)( )*=( )*[\\w]*)");
 
   // Oggetti iterator per iterare sulle corrispondenze
   std::sregex_iterator iteratore(__cmd__.begin(), __cmd__.end(), patternSET);
@@ -2097,7 +2073,7 @@ void shell::LoRaSetConf(string sVar, string sVal)
   {
     config.SPED.uartParity = uartp[sVal];
   }
-  else if (sVar == "airdata")
+  else if (sVar == "airdr")
   {
     config.SPED.airDataRate = air[sVal];
   }
@@ -2155,8 +2131,12 @@ void shell::bt()
 {
 
   char cCH;
+
+  smatch result;
+
   string sMode;
   string sFile;
+
   File pFile;
 
   /*
@@ -2165,11 +2145,12 @@ void shell::bt()
   if ((shell::readFlag("--set")).size() > 0)
   {
     // shell::BTSerial.begin(9600);
+    shell::set("set btname=" + shell::readFlag("--set"));
     shell::BTSerial.begin(s2S(shell::readFlag("--set")));
   }
 
   /*
-   * Invia un messaggio sulla seriale bluetooth
+   * Invia un messaggio sulla seriale bluetooth letto da tastiera
    */
   if ((shell::readFlag("--send")).size() > 0)
   {
@@ -2177,72 +2158,104 @@ void shell::bt()
   }
 
   /*
-   * Legge i dati ricevuti
+   * Invia i dati letti da file al BT
    */
-  __PRTVAR__("file", shell::readFlag("--listening"))
+  sFile = shell::readFlag("<<");
+  __PRTVAR__("sFile", sFile)
 
-  if ((shell::readFlag("--listening")).size() > 0)
+  if (sFile.size() > 0)
+  {
+    regex file("(([\\w.-_!~]+)$)");
+    regex_search(sFile, result, file);
+    sFile = result.str(0);
+    pFile = SPIFFS.open(s2S(shell::cfgshell.__cur_path__ + sFile));
+
+    while (pFile.available())
+    {
+      shell::BTSerial.println(pFile.readStringUntil('\n').c_str());
+    }
+
+    pFile.close();
+  }
+
+  /*
+   * stampa a video i dati letti dal BT
+   */
+  if ((shell::readFlag("--read")).size() > 0)
   {
     __PRTDBG__
 
-    smatch result;
-    regex fo("((>>)( )*[\\w.-_!~]+)");
-
-    /*
-     * controlla se l'output deve essere accodato a file
-     */
-    if (regex_search(sFile, result, fo))
-    {
-      __PRTDBG__
-      sMode = "+a";
-      regex file("(([\\w.-_!~]+)$)");
-      string sData = result.str(0);
-      __PRTVAR__("sData", sData)
-      regex_search(sData, result, file);
-      sFile = result.str(0);
-    }
-    else
-    {
-      /*
-       * Controlla se l'output deve sovrascrivere il contenuto di un file
-       */
-      regex fo("((>)( )*[\\w.-_!~]+)");
-      if (regex_search(sFile, result, fo))
-      {
-        __PRTDBG__
-        regex file("(([\\w.-_!~]+)$)");
-        string sData = result.str(0);
-        regex_search(sData, result, file);
-        sMode = "w";
-        sFile = result.str(0);
-      }
-    }
-    __PRTVAR__("file.size", sFile.size())
-
-    if (sFile.size() > 0)
-    {
-      String sFILE = s2S(shell::cfgshell.__cur_path__ + sFile);
-      pFile = SPIFFS.open(sFILE, sMode.c_str());
-    }
-
-
     if (shell::BTSerial.available())
     {
-      
+
       std::cout << "\n";
 
       while (shell::BTSerial.available())
       {
-        String messaggio = shell::BTSerial.readStringUntil('\n');
+        String sMESSAGGIO = shell::BTSerial.readStringUntil('\n');
         if (pFile)
         {
-          pFile.println(messaggio);
+          pFile.println(sMESSAGGIO);
         }
         else
         {
-          std::cout << S2s(messaggio) << "\n";
+          regex lr("(lora/)[\\w+\\.\\-@&_/ :;\\[\\]=\\(\\)\\|\\#\\.\\$\\{\\}\\?]*");
+          string sMessaggio = S2s(sMESSAGGIO);
+
+          if (regex_search(sMessaggio, result, lr))
+          {
+            shell::set("messaggio=" + sMessaggio);
+            shell::LoRaSend();
+          }
+          else
+          {
+            std::cout << sMessaggio << "\n";
+          }
         }
       }
     }
+  }
+
+  /*
+   * Accoda i dati letti dal BT su file
+   */
+  sFile = shell::readFlag(">>");
+  __PRTVAR__("sFile", sFile)
+
+  if (sFile.size() > 0)
+  {
+
+    regex file("(([\\w.-_!~]+)$)");
+    regex_search(sFile, result, file);
+    sFile = result.str(0);
+    pFile = SPIFFS.open(s2S(shell::cfgshell.__cur_path__ + sFile), "+a");
+
+    while (BTSerial.available())
+    {
+      pFile.println(BTSerial.readStringUntil('\n'));
+    }
+
+    pFile.close();
+  }
+
+  /*
+   * Scrive i dati letti dal BT su file
+   */
+  sFile = shell::readFlag(">");
+  __PRTVAR__("sFile", sFile)
+
+  if (sFile.size() > 0)
+  {
+    regex file("(([\\w.-_!~]+)$)");
+    regex_search(sFile, result, file);
+    sFile = result.str(0);
+    pFile = SPIFFS.open(s2S(shell::cfgshell.__cur_path__ + sFile), "w");
+
+    while (BTSerial.available())
+    {
+      pFile.println(BTSerial.readStringUntil('\n'));
+    }
+
+    pFile.close();
   }
 }
