@@ -149,8 +149,6 @@ private:
   void LoRaSend();                                  // Invia un messaggio
   void LoRaRead();                                  // Legge un messaggio sulla scheda LoRa
 
-  string use(string);                               // ritorna il valore di una variabile
-
 
   // FUNZIONI DI UTILITA' DELLA CLASSE SHELL
   void s2IP(string, int[]);         // converte una stringa in un indirizzo IP

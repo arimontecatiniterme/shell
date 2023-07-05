@@ -1628,6 +1628,8 @@ void shell::LoRaRead()
 
   e220ttl.begin();
 
+ReadLora:
+
   if (mVar["loramode"] == "FIXED")
   {
 
@@ -1637,6 +1639,7 @@ void shell::LoRaRead()
     if (rsc.status.code != 1)
     {
       std::cout << rsc.status.getResponseDescription() << "\n";
+      goto ReadLora;
     }
     else
     {
@@ -1655,6 +1658,7 @@ void shell::LoRaRead()
     if (rc.status.code != 1)
     {
       rc.status.getResponseDescription();
+      goto ReadLora;
     }
     else
     {
