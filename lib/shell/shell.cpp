@@ -1414,7 +1414,7 @@ boolean shell::start(string __cmd__)
 
     else if (result.str(0) == "lora")
     { // esecuzione del comando ( comando interno )
-      shell::flag("((--(set|rconf|mode|username|send))|<<|>>|>)", cfgshell.__row__);
+      shell::flag("((--(set|rconf|mode|username|send|read))|<<|>>|>)", cfgshell.__row__);
       shell::lora();
       cfgshell.__row__ = "";
       shell::cleanFlag();
@@ -1539,6 +1539,15 @@ void shell::lora()
     shell::set("message=" + shell::readFlag("--send"));
     shell::LoRaSend();
   }
+
+  /*
+   * Legge i messaggi in arrivo sulla board LoRa
+   */
+  if ((shell::readFlag("--read")).size())
+  {
+    __PRTDBG__
+    shell::LoRaRead();
+  }
 }
 
 /*
@@ -1551,11 +1560,14 @@ void shell::LoRaSend()
 
   String sMESSAGE = s2S(mVar["message"]);
   String sUSERNAME = s2S(mVar["username"]);
+  int iCH=stoi(mVar["ch"]);
+
 
   Serial2.setPins(shell::myPIN["TX"], shell::myPIN["RX"]); // Arduino RX <-- e220 TX, Arduino TX --> e220 RX
   LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
 
   e220ttl.begin();
+  delay(500);
 
   if (mVar["loramode"] == "FIXED")
   {
@@ -1582,7 +1594,7 @@ void shell::LoRaSend()
     }
 
     /* controlla se la dimensione dell username non ecceda quella riservata in struttura */
-    if (strLenByteMessage > (sizeof(messageLora.message) / sizeof(messageLora.message[0])))
+    if (strLenByteUser > (sizeof(messageLora.user) / sizeof(messageLora.user[0])))
     {
       __PRTDBG__
 
@@ -1594,12 +1606,13 @@ void shell::LoRaSend()
       __PRTDBG__
 
       // username is SHORTER than the buffer
-      sMESSAGE.toCharArray(messageLora.message, sMESSAGE.length() + 1);
+      sUSERNAME.toCharArray(messageLora.user, sUSERNAME.length() + 1);
     }
 
     __PRTDBG__
 
-    ResponseStatus rs = e220ttl.sendBroadcastFixedMessage(atoi((mVar["ch"]).c_str()), &sMESSAGE, (uint8_t)sizeof(struct ChatMessage));
+    /* invia il messaggio */
+    ResponseStatus rs = e220ttl.sendBroadcastFixedMessage(iCH, &sMESSAGE, (uint8_t)sizeof(struct ChatMessage));
     rs.getResponseDescription();
     std::cout << ("\nMessage send: " + rs.getResponseDescription()).c_str();
 
@@ -1610,7 +1623,8 @@ void shell::LoRaSend()
 
     __PRTDBG__
 
-    ResponseStatus rs = e220ttl.sendBroadcastFixedMessage(atoi((mVar["ch"]).c_str()), sMESSAGE);
+
+    ResponseStatus rs = e220ttl.sendBroadcastFixedMessage(iCH, sMESSAGE);
     rs.getResponseDescription();
     std::cout << ("\nMessage send: " + rs.getResponseDescription()).c_str();
   }
@@ -1629,20 +1643,26 @@ void shell::LoRaRead()
   e220ttl.begin();
 
 ReadLora:
+  delay(1000);
 
   if (mVar["loramode"] == "FIXED")
   {
+    __PRTDBG__
 
     ResponseStructContainer rsc = e220ttl.receiveMessage((uint8_t)sizeof(struct ChatMessage));
 
     // Is something goes wrong print error
     if (rsc.status.code != 1)
     {
+      __PRTDBG__
+
       std::cout << rsc.status.getResponseDescription() << "\n";
       goto ReadLora;
     }
     else
     {
+      __PRTDBG__
+
       // Print the data received
       shell::ChatMessage sMessage = *(struct ChatMessage *)rsc.data;
       std::cout << sMessage.user << "/" << sMessage.message << "\n";
@@ -1657,15 +1677,20 @@ ReadLora:
     // Is something goes wrong print error
     if (rc.status.code != 1)
     {
+      __PRTDBG__
       rc.status.getResponseDescription();
       goto ReadLora;
     }
     else
     {
+      __PRTDBG__
       // Print the data received
       std::cout << rc.data << "\n";
     }
   }
+
+  goto ReadLora;
+
 }
 
 /*
@@ -1907,12 +1932,12 @@ void shell::LoRaParseConf(string __cmd__)
     std::string parola = corrispondenza.str();
 
     iPOS = parola.find("=", 0);
-    sName = parola.substr(0, iPOS);
-    sValue = parola.substr(iPOS + 1, parola.length());
-    shell::LoRaSetConf(sName, sValue);
+    sName = shell::trim(parola.substr(0, iPOS));
+    sValue = shell::trim(parola.substr(iPOS + 1, parola.length()));
 
     __PRTVAR__("sName", sName)
     __PRTVAR__("sValue", sValue)
+    shell::LoRaSetConf(sName, sValue);
 
     ++iteratore;
   }
@@ -1923,6 +1948,9 @@ void shell::LoRaParseConf(string __cmd__)
  */
 void shell::LoRaSetConf(string sVar, string sVal)
 {
+
+  shell::trim(sVal);
+  shell::trim(sVar);
 
   /*
    * Definisce la mappa dei valori della velocita' della UART
@@ -2054,22 +2082,26 @@ void shell::LoRaSetConf(string sVar, string sVal)
   // It's important get configuration pointer before all other operation
   Configuration config = *(Configuration *)c.data;
 
-  Serial.println(c.status.getResponseDescription());
+  Serial.print(c.status.getResponseDescription());
+  Serial.print("  ");
   Serial.println(c.status.code);
 
   if (sVar == "addl")
   {
+    __PRTVAR__("addl", sVal)
     config.ADDL = stoi(sVal);
   }
   else if (sVar == "addh")
   {
+    __PRTVAR__("addh", sVal)
     config.ADDH = stoi(sVal);
   }
   else if (sVar == "ch")
   {
+    __PRTVAR__("ch", sVal)
     config.CHAN = stoi(sVal);
   }
-  else if (sVar == "uartb")
+  else if (sVar == "uartbr")
   {
     config.SPED.uartBaudRate = uartb[sVar];
   }
@@ -2113,7 +2145,8 @@ void shell::LoRaSetConf(string sVar, string sVal)
   if (save[sVal])
   {
     ResponseStatus rs = e220ttl.setConfiguration(config, WRITE_CFG_PWR_DWN_SAVE);
-    Serial.println(rs.getResponseDescription());
+    Serial.print(rs.getResponseDescription());
+    Serial.print("   ");
     Serial.println(rs.code);
   }
   else

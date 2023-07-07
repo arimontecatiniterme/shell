@@ -75,7 +75,7 @@ lora - gestisce la configurazione / trasmissione di una scheda lora
               --addl : parte alta dell' indirizzo
               --addh : parte passa dell'indirizzo
               --ch   : canale di trasmissione
-              --uartb [UART_BPS_1200|UART_BPS_2400|UART_BPS_4800|UART_BPS_9600|UART_BPS_19200|UART_BPS_38400|UART_BPS_57600|UART_BPS_115200] : velocita della porta UART
+              --uartbr [UART_BPS_1200|UART_BPS_2400|UART_BPS_4800|UART_BPS_9600|UART_BPS_19200|UART_BPS_38400|UART_BPS_57600|UART_BPS_115200] : velocita della porta UART
               --uartp [MODE_00_8N1|MODE_01_8O1|MODE_10_8E1|MODE_11_8N1] : imposta il modo di parita della porta UART    
               --airdr [AIR_DATA_RATE_000_24|AIR_DATA_RATE_001_24|AIR_DATA_RATE_010_24|AIR_DATA_RATE_011_48|AIR_DATA_RATE_100_96|AIR_DATA_RATE_101_192|AIR_DATA_RATE_110_384|AIR_DATA_RATE_111_625] : velocita di tx in bps
               --packet [SPS_200_00|SPS_128_01|SPS_064_10|SPS_032_11] : dimesione del pacchetto
