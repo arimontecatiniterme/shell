@@ -10,11 +10,7 @@
  *
  */
 
-/*
- * include le librerie personalizzate
- */
-#include "shell.h" /* libreia che contiene le definizioni per i metodi implementati in questo file */
-#include "input.h" /* libreria per la gestione dell'input su seriale */
+#include "shell.h"
 
 /*
  * definisce le costanti della classe
@@ -27,9 +23,9 @@
  * Il meotodo ritorna true se la variabile debug=1
  */
 #define __PRTDBG__                                                                               \
-  if (shell::dbg())                                                                              \
+  if (stoi(mVar["debug"]))                                                                       \
   {                                                                                              \
-    std::cout << "\n..." << __FILE__ << " - " << __LINE__ << " - " << __FUNCTION__ << std::endl; \
+    std::cout << "\n..." << __FILE__ << " - " << __FUNCTION__ << " - " << __LINE__ << std::endl; \
   }
 
 /*
@@ -37,9 +33,9 @@
  * il metodo della classe ritorna true. Il meotodo ritorna true se la variabile debug=1
  */
 #define __PRTVAR__(x, y)                                                            \
-  if (shell::dbg())                                                                 \
+  if (stoi(mVar["debug"]))                                                          \
   {                                                                                 \
-    std::cout << "\n..." << __FILE__ << " - " << __LINE__ << " - " << __FUNCTION__; \
+    std::cout << "\n..." << __FILE__ << " - " << __FUNCTION__ << " - " << __LINE__; \
     std::cout << "\t" << x << "=\t[" << y << "]" << std::endl;                      \
   }
 
@@ -48,21 +44,19 @@ using namespace std;
 /* costruttore di default */
 shell::shell()
 {
-  cfgshell.__mode__ = false;
-  cfgshell.__cur_path__ = "/";
-  cfgshell.__mach__ = "IQ5MT";
-  cfgshell.__SesTimeout__ = 30000; // tempo di timeout a 30 secondi
-  cfgshell.__prmt__ = cfgshell.__cur_path__;
-  cfgshell.__row__ = "";
-  cfgshell.__pipe__ = "";
-  cfgshell.__temp__ = "";
-  cfgshell.__btf__ = "";
 
-  // pulisce il vettore delle variabili e inizializza quelle d'ambiente
+  /* inizializza la struttura che modella la board */
+  myBoard.sNAME = "IQ5MT";
+  myBoard.sMODEL = "esp32";
+  myBoard.iTimeout = 3000;
+
+  /* pulisce il vettore delle variabili e lo inizializza con i valori di default */
   mVar.clear();
-  shell::set("set path=/");
-  shell::set("set debug=1");
-  shell::set("set << shell.ini");
+
+  mVar["path"] = "/";                         // path attuale
+  mVar["debug"] = "0";                        // 1 attiva il modo debug
+  mVar["shell"] = mVar["path"] + "shell.ini"; // file di configurazione della shell
+  mVar["echochar"] = "1";                     // 1 attiva l'echo dei caratteri
 }
 
 /* controlla se e' attivo il debug  */
@@ -84,7 +78,7 @@ String shell::s2S(string str)
   int len = 0;
   int pos;
   char rc;
-  String STR;
+  String sSTR = "";
 
   len = str.length();
   char buffer[len + 1];
@@ -93,16 +87,16 @@ String shell::s2S(string str)
 
   pos = 0;
 
+  sSTR.clear();
   while (buffer[pos] != '\0')
   {
+    rc = '\0';
     rc = buffer[pos];
-    STR = STR + rc;
+    sSTR += rc;
     pos++;
   }
 
-  STR = STR + '\0';
-
-  return STR;
+  return sSTR;
 
 } // end
 
@@ -152,172 +146,132 @@ string shell::trim(const std::string &source)
 //
 //       ID :
 // Descrive : Copia un file
-//     Date :
+//     Date : 15.07.2023
 //   Author : Andrea Venuti
 //
 /************************************************************/
-// START function(yoZUM )
-void shell::cp(string __files__, string __filed__)
+boolean shell::cp(String __files__, String __filed__)
 {
-  String FILES; // nome del file da copiare
-  String FILED; // nome del file di destinazione
-  String ROW;   // riga letta del file
-  string sLine;
-
-  File targetFile;
-
-  input row;
-
-  boolean bTest;
-
+  boolean bTest = true;
   std::smatch result;
 
-  // conversione dei parametri attuali
-  FILES = s2S(cfgshell.__cur_path__ + __files__);
-  FILED = s2S(cfgshell.__cur_path__ + __filed__);
+  __PRTVAR__("__files__", S2s(__files__))
+  __PRTVAR__("__filed__", S2s(__filed__))
 
-  bTest = true;
-
-  // Apro il file sorgente in modalità di lettura
-  File sourceFile = SPIFFS.open(FILES, "r");
-  if (!sourceFile)
+  if (SPIFFS.exists(__filed__))
   {
-    Serial.println("Errore nella lettura del file sorgente");
-    return;
+
+    regex rAnswer("(s|S|y|Y){1}"); // tutti i caratteri diversi da quelli indicati signoficano no nella risposta
+    input inpRow;
+
+    std::cout << "\n...il file di destinazione esiste! Lo cancello ? [sN]...";
+    std::cin >> inpRow;
+    string sRow = inpRow;
+    if (regex_search(sRow, result, rAnswer))
+      bTest = shell::rm(__filed__);
+    else
+      bTest = false;
   }
 
-  // se tutto va bene apro il file destinazione in modalità di scrittura
-  if (SPIFFS.exists(FILED))
+  if (bTest)
   {
-    regex r("(sRow;|S|n|N){1}");
-    do
-    {
-      std::cout << "\n...il file di destinazione esiste...lo cancello ? "
-                   "[snSN]....";
-      std::cin >> row;
-      sLine = row;
-    } while (!regex_search(sLine, result, r));
 
-    if (sLine == "sRow;" ||
-        sLine == "S")
-    { // si e' scelto di cancellare il file di destinazione
-      shell::rm(__filed__);
+    // imposta a false in quanto se qualcosa va storto
+    // il metodo ritorna false
+    bTest = false;
+
+    // crea i puntatori dei file source e dest
+    File pSourceFile = SPIFFS.open(__files__, "r");
+    File pDestFile = SPIFFS.open(__filed__, "w");
+
+    if (pSourceFile && pDestFile)
+    {
+      while (pSourceFile.available())
+      {
+        pDestFile.write(pSourceFile.read());
+      }
       bTest = true;
-    }
-  }
-  else
-  {
-    targetFile = SPIFFS.open(FILED, "w");
-    if (!targetFile)
-    {
-      Serial.println("Errore nella scrittura del file destinazione");
-      sourceFile.close();
-      return;
     }
     else
     {
-      // Leggo il contenuto del file sorgente e scrivo nel file destinazione
-      while (sourceFile.available())
-      {
-        targetFile.write(sourceFile.read());
-      }
+      std::cout << "\n...errore... ";
+      std::cout << "il file sorgente non esite ";
+      std::cout << "oppure quello di destinazione non puo' essere creato...\n";
     }
+
+    // Chiudo i file
+    pSourceFile.close();
+    pDestFile.close();
   }
 
-  // Chiudo i file
-  sourceFile.close();
-  targetFile.close();
+  return bTest;
 
-} // END function( yoZUM )
+} // END cp
 
 //************************************************************/
 //
-//       ID :
-// Descrive : rimuove un file
-//     Date :
+// Descrive : cancella un file
+//     Date : 15.07.2023
 //   Author : Andrea Venuti
 //
 //************************************************************/
-void shell::rm(string __file__)
+boolean shell::rm(String __file__)
 {
-  String FILE;
-  string sLine;
-  input row;
   smatch result;
+  boolean bResult = false;
 
-  FILE = s2S(__file__);
-
-  if (!SPIFFS.begin(true))
+  if (SPIFFS.exists(__file__))
   {
-    std::cout << "\n\n\tAn Error has occurred while mounting SPIFFS\n\n";
+    regex rAnswer("(s|S|y|Y){1}");
+    input inpAnswer;
+
+    Serial.print("...Cancello il file " + __file__ + " ? [sN]...");
+    std::cin >> inpAnswer;
+    string sAnswer = inpAnswer;
+    String sANSWER = shell::s2S(sAnswer);
+    if (std::regex_search(sAnswer, result, rAnswer))
+    {
+      if (SPIFFS.remove(__file__))
+        bResult = true;
+    }
   }
   else
   {
-    if (!SPIFFS.exists(FILE))
-    {
-      std::cout << "\n\n\tAn File not exist : " << __file__ << "\n\n";
-    }
-    else
-    {
-      regex r("(s|S|n|N){1}");
-
-      do
-      {
-        row.clear();
-        std::cout << "\n\n\tCancello il file ? [sN]....";
-        std::cin >> row;
-        sLine = row;
-      } while (!regex_search(sLine, result, r));
-
-      if (sLine == "s" || sLine == "S")
-      { // si e' scelto di cancellare il file di destinazione
-        if (SPIFFS.remove(FILE))
-        {
-          std::cout << "\n\n\tFile cancellato....";
-        }
-        else
-        {
-          std::cout << "\n\n\tImpossibile rimuovere il file....";
-        }
-      }
-    }
+    Serial.println("...il file non esiste " + __file__ + " oppure e' inaccessibile...");
   }
 
-} // END function( AN4KM )
+  return bResult;
+
+} // END rm
 
 //************************************************************/
 //
-//       ID :
 // Descrive : formatta il FS
 //     Date :
 //   Author : Andrea Venuti
 //
 //************************************************************/
-// START function(AN4KM )
 boolean shell::format()
 {
-  boolean bResult;
-  string sLine;
-  input row;
+  input inpAnswer;
   smatch result;
+  string sAnswer;
 
-  bResult = false;
+  boolean bResult = false;
 
-  regex r("(sRow;|S|n|N){1}");
+  std::regex rAnswer("(sRow;|y|Y|S|s){1}");
 
   do
   {
     std::cout << "\n\n\tFormatto il FS ? [sN]....";
-    std::cin >> row;
-    sLine = row;
-  } while (!regex_search(sLine, result, r));
+    std::cin >> inpAnswer;
+    sAnswer = inpAnswer;
+  } while (!regex_search(sAnswer, result, rAnswer));
 
-  if (sLine == "sRow;" ||
-      sLine == "S")
-  { // si e' scelto di cancellare il file di destinazione
+  if ((result.str(0)).length() > 0)
     if (SPIFFS.format())
     {
-      std::cout << "Formattazione eseguita correttamente..."
+      std::cout << "..Formattazione eseguita correttamente..."
                 << "\n";
       bResult = true;
     }
@@ -326,690 +280,227 @@ boolean shell::format()
       bResult = false;
     }
 
-    return bResult;
-  }
-
-  return false;
-} // end format()
+  return bResult;
+} // end format
 
 //************************************************************/
 //
-//       ID :
-// Descrive : rinomina un file
-//     Date :
+// Descrive : sposta un file
+//     Date : 16.07.20323
 //   Author : Andrea Venuti
 //
 //************************************************************/
-// START function(6IyDN )
-boolean shell::mv(string __cmd__)
+boolean shell::mv(String __files__, String __filed__)
 {
-  //-------------------|--------------------------------
-  String FILES, FILED;
-  String ROW;
-  //--------------------|--------------------------------
-  string __rows__;
-  string __temp__;
-  string sRow, sS, sD;
-  string sTemp, sPrec, sSuc, sReg;
-  string asSWITCH[8][4];
-  //--------------------|--------------------------------
-  char *cSwitch;
-  //--------------------|--------------------------------
-  int iIndex, iMax, iPrec;
-  // int iSize = 4;
-  //--------------------|--------------------------------
-  smatch result, result0, result1, result2;
-  //--------------------|--------------------------------
-  File FD, FS;
-  //--------------------|--------------------------------
-  vector<string> aOutput;
 
-  regex r("(-(s|d))");
-  sPrec = "";
-  sSuc = "";
-  sRow = "";
-  iIndex = 0;
-  iPrec = 0;
+  boolean bAnswer = false;
+  boolean bResult = false;
 
-  try
+  /*
+   * TEST sull'esistenza dei file
+
+          |__files__ | __filed__ |
+          |    1     |     1     | chiedo conferma della cancellazione del __filed__ e copio i file
+          |    0     |     1     | operazione fallita
+          |    0     |     0     | operazione fallita
+          |    1     |     0     | copio il file
+   */
+
+  if (SPIFFS.exists(__files__))
   {
-    for (sregex_iterator it =
-             sregex_iterator(__cmd__.begin(), __cmd__.end(), r);
-         it != sregex_iterator(); it++)
-    {
-      result = *it;
+    bAnswer = true;
 
-      if (sRow.find(result.str(0)) != std::string::npos)
-      {
-        std::cout << "\n\n\t"
-                  << "ATTENZIONE switch ripetuti....";
-        return "";
-      }
+    if (SPIFFS.exists(__filed__))
+    {
+      string sAnswer;
+      input inpAnswer;
+      smatch result;
+      regex rAnswer("(y|Y|s|S){1}"); // si intende no alla cancellazione ogni caratteri diverso da quelli indicati
+      std::cout << "\n...il file di destinazione esiste! Lo cancello ? [sN]...";
+      std::cin >> inpAnswer;
+      sAnswer = inpAnswer;
+      if (std::regex_search(sAnswer, result, rAnswer))
+        bAnswer = true;
       else
-      {
-        if (sPrec != "")
-        {
-          sReg = "(" + sPrec + ")(.+)(" + result.str(0) + ")";
-          sReg = trim(sReg);
-
-          asSWITCH[iIndex - 1][0] = trim(sPrec);
-          asSWITCH[iIndex - 1][1] = trim(sReg);
-          asSWITCH[iIndex - 1][2] =
-              trim(__cmd__.substr(iPrec + 2, result.position(0) - iPrec - 3));
-        }
-      }
-
-      sPrec = result.str(0);
-      iPrec = result.position(0);
-      sRow += result.str(0);
-      iIndex++;
+        bAnswer = false;
     }
-
-    sReg = "(" + result.str(0) + ")(.+)";
-    iIndex--;
-    asSWITCH[iIndex][0] = trim(sPrec);
-    asSWITCH[iIndex][1] = trim(sReg);
-    asSWITCH[iIndex][2] =
-        trim(__cmd__.substr(iPrec + 2, __cmd__.length() - iPrec));
-  }
-
-  catch (const std::regex_error &r)
-  {
-    std::cout << "\n\n\tregex_error caught: " << r.what() << '\n';
-    if (r.code() == std::regex_constants::error_brack)
-    {
-      std::cout << "\tThe code was error_brack\n";
-    }
-  }
-
-  iMax = iIndex;
-
-  // separazione delle regole di estrazione
-  sTemp = "";
-  sS = "";
-  sD = "";
-
-  for (iIndex = 0; iIndex <= iMax; iIndex++)
-  {
-    sTemp = trim(asSWITCH[iIndex][0]);
-    cSwitch = &sTemp[1];
-
-    // std::cout << "\n\t\t" << asSWITCH[iIndex][0] << "(" << cSwitch <<
-    // ")\t" << asSWITCH[iIndex][1] << "\t" << asSWITCH[iIndex][2];
-
-    switch (*cSwitch)
-    {
-    case 's':
-    { // nome del file
-      sS = asSWITCH[iIndex][2];
-      FILES = s2S(cfgshell.__cur_path__ + trim(sS));
-      if (!SPIFFS.exists(FILES))
-      {
-        std::cout << "\n\n\t\tIl file di origine non esiste.....\n\n";
-        return false;
-      }
-
-      break;
-    }
-    case 'd':
-    { // nome della variabile
-      sD = asSWITCH[iIndex][2];
-      FILED = s2S(cfgshell.__cur_path__ + trim(sD));
-      if (SPIFFS.exists(FILED))
-      {
-        shell::rm(cfgshell.__cur_path__ + trim(sD));
-      }
-      break;
-    }
-    }
-  }
-
-  if (!SPIFFS.begin(true))
-  {
-    std::cout << "\n\n\tAn Error has occurred while mounting SPIFFS\n\n";
-    return false;
   }
   else
   {
-    if (!SPIFFS.rename(FILES, FILED))
-    {
-      return false;
-    }
-    else
-    {
-      return true;
-    }
+    std::cout << "\n...il files " + __files__ + " non esiste...\n";
   }
 
-} // END function( 6IyDN )
+  if (bAnswer)
+    if (SPIFFS.exists(__filed__))
+      // cancella il file di destinazione
+      shell::rm(__filed__);
+
+  // copia il file
+  if (shell::cp(__files__, __filed__))
+  {
+    bResult = true;
+    shell::rm(__files__);
+  }
+  return bResult;
+
+} // END mv()
 
 //************************************************************/
 //
-//       ID :
-// Descrive : elenca i file di una directory
-//     Date :
+// Descrive : elenca i file della directory passata come
+//            parametro e stampa a video
+//     Date : 16.07.2023
 //   Author : Andrea Venuti
 //
 //************************************************************/
-void shell::ls(string __cmd__)
+void shell::ls(String __dir__)
 {
-  File root = SPIFFS.open("/");
+
+  __PRTVAR__("__dir__", S2s(__dir__))
+
+  File root = SPIFFS.open(__dir__);
   File file = root.openNextFile();
-  File pFileOut;
-  File pFileIn;
 
-  string FO;
-  string sOutput;
-
-  boolean bVideo = true;
-
-  /* controlla se vi sono redirect */
-
-  if ((shell::readFlag(">")).size() > 0)
-  {
-    /* apertura del file in modo sovrascrittura */
-    String FO = shell::s2S(getPath() + shell::readFlag(">"));
-    pFileOut = SPIFFS.open(FO, "w");
-    bVideo = false;
-  }
-  else if (shell::readFlag(">>").size() > 0)
-  {
-    /* Apertura del file in modo append */
-    String FO = shell::s2S(getPath() + shell::readFlag(">>"));
-    pFileOut = SPIFFS.open(FO, "a");
-    bVideo = false;
-  }
-
-  std::cout << "\n";
+  Serial.println("");
 
   while (file)
   {
-
-    sOutput = S2s(file.name());
-
-    if (shell::readPos("-d"))
-      sOutput = sOutput + " " + to_string(file.size());
-
-    if (shell::readPos("-t"))
-      sOutput = sOutput + " " + to_string(file.getLastWrite());
-
-    if (bVideo)
-    {
-      std::cout << sOutput << "\n";
-    }
-    else
-    {
-      pFileOut.println(s2S(sOutput));
-    }
-
+    __PRTDBG__
+    Serial.print(file.name());
+    Serial.print("  ");
+    Serial.println(file.size());
     file = root.openNextFile();
   }
-} // END function ls()
+
+  Serial.println("");
+
+} // END ls(string)
 
 //************************************************************/
 //
-// Descrive : costruisce la matrice aReg
-//   Retrun : void
-//   Author : Andrea Venuti
-//
-//   1 : string __sValue__  = riga di comando di grep
-//************************************************************/
-void shell::flag(string __sReg__, string __sValue__)
-{
-  smatch result;
-
-  string sRow;
-
-  boolean bTest;
-  boolean bTestExt;
-  boolean bTestInt;
-
-  int iStart = 0;    // valore di partenza dell'indice della matrice quando si
-                     // inseriscono i valori del flag
-  int iIndexFlg = 0; // indice dell'array asFlg
-
-  /* switch consentiti */
-  regex r(__sReg__);
-
-  /* ciclo di separazione degli switch */
-  for (sregex_iterator it =
-           sregex_iterator(__sValue__.begin(), __sValue__.end(), r);
-       it != sregex_iterator(); it++)
-  {
-    result = *it;
-    shell::setFlag(result.str(0), iIndexFlg);
-    shell::setPos(__sValue__.find(result.str(0)) + result.str(0).size(),
-                  iIndexFlg);
-    shell::setPos(__sValue__.size(), iIndexFlg + 1);
-    iIndexFlg++;
-  }
-
-  for (int iIndexVal = iStart; iIndexVal <= iIndexFlg; iIndexVal++)
-  {
-
-    __PRTVAR__("__sValue__", __sValue__)
-    __PRTVAR__("shell::readPos(iIndexVal)", shell::readPos(iIndexVal))
-    __PRTVAR__("shell::readPos(iIndexVal + 1)", shell::readPos(iIndexVal + 1))
-    __PRTVAR__("shell::readFlag(iIndexVal + 1)).size()", (shell::readFlag(iIndexVal + 1)).size())
-
-    shell::setValue(
-        shell::trim(__sValue__.substr(
-            shell::readPos(iIndexVal),
-            shell::readPos(iIndexVal + 1) - shell::readPos(iIndexVal) -
-                (shell::readFlag(iIndexVal + 1)).size())),
-        iIndexVal);
-  }
-}
-
-//************************************************************/
-//
-// Descrive : esegue il comado grep con output a video
-//   Retrun : void
-//   Author : Andrea Venuti
-//************************************************************/
-void shell::grep()
-{
-  String FILES;
-  string sROW;
-  string sFiles;
-  string sResarch;
-  string sString;
-  string sVar;
-  string sOutput;
-  smatch result;
-  smatch resVar;
-
-  /* Imposta di default l'output a video */
-  boolean bVideo = true;
-
-  File pFILE;
-  File pFileOut;
-
-  /* controlla se vi e' un redirect e che di che tipo e' */
-  if ((shell::readFlag(">")).size() > 0)
-  {
-    /* apertura del file in modo sovrascrittura */
-    String FO = shell::s2S(shell::getPath() + shell::readFlag(">"));
-    __PRTVAR__("shell::readFlag(\">\")", shell::getPath() + shell::readFlag(">"))
-
-    if (SPIFFS.exists(FO))
-    {
-      SPIFFS.remove(FO);
-    }
-
-    pFileOut = SPIFFS.open(FO, "w");
-
-    bVideo = false;
-  }
-  else if (shell::readFlag(">>").size() > 0)
-  {
-    /* Apertura del file in modo append */
-    String FO = shell::s2S(getPath() + shell::readFlag(">>"));
-    pFileOut = SPIFFS.open(FO, "a");
-    bVideo = false;
-  }
-
-  /* imposta la regex */
-  regex r(shell::readFlag("--reg"));
-
-  sFiles = shell::readFlag("<<"); // estrae il nome del file di input per la funzioneda una stringa
-
-  if (sFiles.length() > 0)
-  { /* se l'input del comando e' un file allora inizia
-       il test dell'esistenza e il ciclo di lettura */
-    FILES = shell::s2S(getPath() + sFiles);
-    __PRTVAR__("FILES", getPath() + sFiles)
-
-    if (SPIFFS.exists(FILES))
-    { /* se il file dove cercare esiste inizia il
-         ciclo di lettura */
-      pFILE = SPIFFS.open(FILES);
-
-      while (pFILE.available())
-      { /* il ciclo di lettura continua fino alla fine
-           del file */
-        sResarch = shell::S2s(pFILE.readStringUntil('\n'));
-
-        if (regex_search(sResarch, result,
-                         r))
-        { /* se la regola puo' essere applicata alla riga
-             la estrae */
-          cfgshell.__temp__ = result.str(0);
-          if (bVideo)
-          { /* se l'output e' il video stampa la riga letta */
-            std::cout << "\n"
-                      << cfgshell.__temp__;
-          }
-          else
-          { /* altrimenti lo reindirizza nel file */
-            pFileOut.println(shell::s2S(cfgshell.__temp__));
-            __PRTVAR__("cfgshell.__temp__", cfgshell.__temp__)
-          }
-        }
-      }
-    }
-  }
-}
-
-//************************************************************/
-//
-//       ID :
-// Describe : edita un file
-//     Date :
+// Descrive : elenca i file della directory passata come
+//            parametro e stampa su file
+// Parameter : ls(__dir__,__file__,__mode__)
+//     Date : 16.07.2023
 //   Author : Andrea Venuti
 //
 //************************************************************/
-// START function(6IyDN )
-void shell::edlin(string __file__)
-{
-  String FILE;  // nome del file da editare/visualizzare
-  String ROW;   // riga letta del file
-  string sLine; // input string
-  string sTemp;
-
-  char *cTemp;
-
-  vector<string> buffer; // buffer che rappresenta il contenuto del file
-  vector<string> temp;   // copia del buffer
-
-  boolean bTest = true;
-  boolean bTest1 = true;
-
-  int iIndex; // posizione corrente nel buffer
-  int iAux;   // indice ausiliario
-  int iStart; // riga iniziale del buffer visualizzato
-  int iEnd;   // riga finale del buffer visualizzato
-
-  input iLine; // oggetto di tipo input
-
-  smatch result;
-
-  // convert name
-  FILE = s2S(cfgshell.__cur_path__ + __file__);
-
-  if (__file__.length() > 0 && !SPIFFS.exists(FILE))
-  {
-    regex r("(n|N|y|Y)");
-
-    do
-    {
-      std::cout << "\n\n\tDo you want create file [yN] :";
-      iLine.clear();
-      std::cin >> iLine;
-      sLine = iLine;
-    } while (!regex_search(sLine, result, r));
-
-    if (sLine == "y" || sLine == "Y")
-    {
-      File file = SPIFFS.open(FILE, "w");
-      file.print(" \n");
-      file.close();
-    }
-  }
-
-  if (SPIFFS.exists(FILE))
-  {
-    File file = SPIFFS.open(FILE);
-
-    // costruisce il buffer
-    while (file.available())
-    {
-      buffer.push_back(S2s(file.readStringUntil('\n')));
-    }
-
-    file.close();
-
-    // editing del
-    // buffer----------------------------------------------------------------------------------------------------------------------------
-
-    // START while( lFzAh )
-    iIndex = 0;
-    regex r("(p|n|q|s|([0-9]{1,}[i|d|e]))");
-
-    while (bTest)
-    {
-      do
-      { // ciclo di visualizzazione del buffer
-        iAux = 0;
-        iStart = iIndex;
-
-        std::cout << "\033[2J\033[1;1H"; // pulisce lo schermo
-        std::cout << "\n\n=============================================="
-                     "=================================================="
-                     "=======================================";
-
-        while (iIndex < buffer.size() && iAux < 20)
-        {
-          cout << "\n"
-               << iIndex << "\t" << buffer[iIndex];
-          iIndex++;
-          iAux++;
-        }
-
-        std::cout << "\n================================================"
-                     "=================================================="
-                     "======================================";
-        std::cout << "\n[p] Pg UP - [n] Pg Down - [num. Linea]( [e] Edit | "
-                     "[i] Ins | [d] Del. ) - [s] Save - [q] Exit : ";
-
-        iLine.clear();
-        std::cin >> iLine;
-        sLine = iLine;
-
-        if (regex_search(sLine, result, r))
-        {
-          bTest1 = false;
-        }
-        else
-        {
-          iIndex = iStart;
-        }
-      } while (bTest1);
-
-      iEnd = iIndex;
-
-      iLine.clear();
-      cTemp = &sLine[sLine.length() - 1];
-
-      switch (*cTemp)
-      {
-      case 'p':
-      { // torna indietro di una pagina
-        iIndex = iStart - 20;
-        if (iIndex < 0)
-        {
-          iIndex = 0;
-        }
-
-        break;
-      }
-
-      case 'n':
-      { // avanza di una pagina
-        iIndex = iEnd;
-        if (iIndex > buffer.size())
-        {
-          iIndex = iStart;
-        }
-
-        break;
-      }
-
-      case 'e':
-      { // modifica una linea del buffer
-        sTemp = sLine.substr(0, sLine.length() - 1);
-        iAux = stoi(sTemp);
-        std::cout << "\n\n"
-                  << buffer[iAux] << "\n";
-        iLine.clear();
-        std::cin >> iLine;
-        sTemp = iLine;
-        buffer[iAux] = sTemp;
-
-        iIndex = iStart;
-        break;
-      }
-
-      case 'd':
-      { // cancella una linea del buffer
-        iIndex = iStart;
-        sTemp = sLine.substr(0, sLine.length() - 1);
-        iAux = abs(stoi(sTemp));
-        if (iAux <= buffer.size())
-        {
-          buffer.erase(buffer.begin() + iAux);
-        }
-        break;
-      }
-
-      case 'i':
-      { // aggiunge una line a del buffer
-
-        iIndex = iStart;
-        sTemp = sLine.substr(0, sLine.length() - 1);
-        iAux = abs(stoi(sTemp));
-        if (iAux <= buffer.size() + 1)
-        {
-          std::cout << "\n...Inserisci una nuova linea \n";
-          std::cin >> iLine;
-          sTemp = iLine;
-          buffer.insert(buffer.begin() + iAux, sTemp);
-        }
-        break;
-      }
-
-      case 's':
-      { // salva le modifiche
-
-        iIndex = iStart;
-        iIndex = 0;
-
-        File file = SPIFFS.open(FILE, "w");
-        if (file)
-        {
-          std::cout << "\n\n\tSaving";
-
-          while (iIndex < buffer.size())
-          {
-            if (file.print(s2S(buffer[iIndex]) + "\n"))
-            {
-              std::cout << ".";
-            }
-            else
-            {
-              std::cout << "!";
-            }
-
-            iIndex++;
-          }
-        }
-        else
-        {
-          std::cout << "\n\n\tImpossibile salvare...";
-        }
-
-        std::cout << "\n\n\tPremi INVIO per continuare...";
-        std::cin >> iLine;
-        file.close();
-        iIndex = iStart;
-
-        break;
-      }
-
-      case 'q':
-      { // esce dall'editor
-        bTest = false;
-        break;
-      }
-
-      } // end switch cTemp
-    }
-  }
-
-} // END function( WyJfK )
-
-//************************************************************/
-//
-//       ID :
-// Descrive : stampa la matrice aReg
-//     Date :
-//   Author : Andrea Venuti
-//
-//************************************************************/
-void shell::printFlag()
-{
-  for (int iAux = 0; iAux < 6; iAux++)
-  {
-    std::cout << "\n\naReg[" << iAux << "].sFlag=" << shell::readFlag(iAux);
-    std::cout << "\naReg[" << iAux << "].iPos=" << shell::readPos(iAux);
-    std::cout << "\naReg[" << iAux << "].sValue=" << shell::readValue(iAux);
-  }
-}
-
-//************************************************************/
-//
-//       ID :
-// Descrive : ritorna il valore del flag passato come parametro attuale
-//     Date :
-//   Author : Andrea Venuti
-//
-//************************************************************/
-string shell::readFlag(string __sFlag__)
-{
-  for (int iAux = 0; iAux < 6; iAux++)
-  {
-    // shell::grepReadFlag(iAux)
-    if (aReg[iAux].sFlag == __sFlag__)
-    {
-      return shell::readValue(iAux);
-    }
-  }
-  return "";
-}
-
-//************************************************************/
-//
-//       ID :
-// Descrive : ritorna il valore della posizione del flag passato come parametro attuale
-//     Date :
-//   Author : Andrea Venuti
-//
-//************************************************************/
-int shell::readPos(string __sFlag__)
-{
-  for (int iAux = 0; iAux < 6; iAux++)
-  {
-    if (aReg[iAux].sFlag == __sFlag__)
-    {
-      return shell::readPos(iAux);
-    }
-  }
-  return 0;
-}
-
-/************************************************************/
-//
-//       ID :
-// Descrive : estrae una regexp da una stringa
-//     Date :
-//   Author : Andrea Venuti
-//
-//************************************************************/
-string shell::extract(string __reg__, string __cmd__)
+void shell::ls(String __dir__, String __file__, String __mode__)
 {
 
-  smatch result;
+  File pROOT = SPIFFS.open(__dir__);
+  File pFILE_OUT = SPIFFS.open(__file__, __mode__.c_str());
 
-  regex s(__reg__);
-  if (regex_search(__cmd__, result, s))
+  Serial.println("");
+
+  if (pFILE_OUT)
   {
-    return result.str(0);
+    File pFILE = pROOT.openNextFile();
+    while (pFILE)
+    {
+      pFILE_OUT.print(pFILE.name());
+      pFILE_OUT.print("  ");
+      pFILE_OUT.println(pFILE.size());
+      pFILE = pROOT.openNextFile();
+    }
+
+    pFILE_OUT.close();
   }
   else
   {
-    return "";
+    Serial.println("...impossibile stampare sul file " + __file__);
   }
-}
+
+  Serial.println();
+
+} // END ls(string, string)
+
+//************************************************************/
+//
+// Descrive : applica una regexp al contenuto di un file con stampa a video
+//   Retrun : void
+//   Author : Andrea Venuti
+//************************************************************/
+void shell::grep(string sReg, String sFILE)
+{
+
+  __PRTVAR__("sReg", sReg)
+  __PRTVAR__("sFILE", S2s(sFILE))
+
+  smatch result;
+  std::regex regVal(sReg);
+
+  if (SPIFFS.exists(sFILE))
+  {
+    // se il file esiste lo apre
+    File pFILE = SPIFFS.open(sFILE);
+    if (pFILE)
+    {
+      // se l'apertura va a buon fine si applica la regexp a tutte le righe
+
+      __PRTDBG__
+
+      string sRow;
+      while (pFILE.available())
+      {
+        sRow = S2s(pFILE.readStringUntil('\n'));
+
+        __PRTVAR__("sRow", sRow)
+
+        if (regex_search(sRow, result, regVal))
+          std::cout << "\n"
+                    << result.str(0);
+      }
+      pFILE.close();
+      std::cout << "\n";
+    }
+  }
+
+} // end grep(std::string, String)
+
+//************************************************************/
+//
+// Descrive : applica una regexp al contenuto di un file con stampa su file
+//   Retrun : void
+//   Author : Andrea Venuti
+//************************************************************/
+void shell::grep(std::string sReg, String sFILE_IN, String sFILE_OUT, String sMODE)
+{
+  smatch result;
+  std::regex regVal(sReg);
+
+  __PRTVAR__("sReg", sReg)
+  __PRTVAR__("sFILE_IN", S2s(sFILE_IN))
+  __PRTVAR__("sFILE_OUT", S2s(sFILE_OUT))
+  __PRTVAR__("sMODE", S2s(sMODE))
+
+  if (SPIFFS.exists(sFILE_IN))
+  {
+
+    __PRTDBG__
+
+    // se il file esiste lo apre
+    File pFILE_IN = SPIFFS.open(sFILE_IN);
+    if (pFILE_IN)
+    {
+      __PRTDBG__
+
+      // se l'apertura del file di input va a buon fine si apre di output
+      File pFILE_OUT = SPIFFS.open(sFILE_OUT, sMODE.c_str());
+      // se l'apertura va a buon fine si applica la regexp a tutte le ricghe
+      while (pFILE_IN.available())
+      {
+        string sRow = S2s(pFILE_IN.readStringUntil('\n'));
+        if (regex_search(sRow, result, regVal))
+          pFILE_OUT.println(s2S(result.str(0)));
+      }
+      pFILE_IN.close();
+      pFILE_OUT.close();
+      std::cout << "\n";
+    }
+  }
+
+} // end grep(std::string, String, String, String)
 
 //************************************************************/
 //
@@ -1022,19 +513,31 @@ string shell::extract(string __reg__, string __cmd__)
 void shell::set(string __cmd__)
 {
 
+  __PRTVAR__("__cmd__", __cmd__)
+
   smatch result;
   File pFile;
 
   int iPos;
   string sVar;
   string sVal;
+  string sFile;
 
   regex r("(<< ([\\w+\\.-@$&]*))");
   if (regex_search(__cmd__, result, r))
   {
+    __PRTDBG__
+
+    __cmd__ = result.str(0);
+
+    __PRTVAR__("__cmd__", __cmd__)
+
     regex f("(([\\w+\\.-@$&]*)$)");
-    regex_search(__cmd__, result, f);
-    string sFile = result.str(0);
+    if (regex_search(__cmd__, result, f))
+      sFile = result.str(0);
+
+    __PRTVAR__("sFile", sFile)
+
     if (SPIFFS.exists(s2S(mVar["path"] + sFile)))
     {
       pFile = SPIFFS.open(s2S(mVar["path"] + sFile));
@@ -1185,1114 +688,890 @@ void shell::echo(string __cmd__)
 
 //************************************************************/
 //
-//       ID :
-// Descrive : Avvia una sessione di shell
+// Descrive : avvia una sessione di shell in modo trasparente
 //     Date :
 //   Author : Andrea Venuti
-//   return : true se il comando e' esterno
 //
 //************************************************************/
-boolean shell::start(string __cmd__)
+void shell::start(string sRow)
 {
+
+  sRow = shell::trim(sRow);
+  __PRTVAR__("sRow", sRow)
+
+  boolean bPipe = false; // indica se la shell sta processando una catena di pipe
+  string sCommand;       // comando digitato
+  string sTemp;          // comando temporaneo
+  string sFileIN;        // nome temporaneo del file di out di scambio di dati
+  string sFileOUT;       // nome temporaneo del file di input di scambio di dati
   smatch result;
-  boolean bCMD = false;
-  boolean bInput = true;
-  String FILE;
-  File pFile;
-  string __files__, __filed__;
-  string random_string;
-  string in;
-  string out;
-  string sReg;
-
-  std::vector<std::string> __command__; // crea il vettore comandi
-
-  int iPosix = 0;
-  int iPipe = 0;
-  int iStart = 0;
-  int iEnd = 0;
+  int iStep = 0;
+  int iMaxStep = 0;
   int iAux = 0;
 
-  srand(time(NULL));
+  std::regex regCommand("^(( )*(ls|cp|grep|set|echo|format|edlin|rm|mv|exit|cls|ifup|help|cat|lora|bt))");
+  std::regex delimiter("\\|");
 
-  /* regole di estrazione dei comandi */
-  regex r("^([ ]{0,}(ls|cp|grep|set|echo|format|edlin|rm|mv|exit|cls|ifup|help|cat|lora|bt))");
-  /*                  |  |   |    |  |   |  |   |     |   |   |    |   |   |    |   |    |  */
-  /*                 OK  |   |    | OK   |  |   |     |   |   |    OK  |   |    OK  |    OK */
-  /*                    OK   |    |     OK  |   |     |   |   OK       |   OK       OK      */
-  /*                        OK    |        OK  OK     |   OK           |                    */
-  /*                              OK                  OK               OK                   */
+  // rilevamento della catena di pipe
+  // ls | grep --reg .... | set | echo
+  std::sregex_token_iterator it(sRow.begin(), sRow.end(), delimiter, -1);
+  std::sregex_token_iterator end;
 
-  /* regole di estrazione del nome del file */
-  regex f("([~\\w.]+)$");
-  regex fo("(-fo )([(\\w)-._]{0,}){1,}");
-  regex fd("(-fd )([(\\w)-._]{0,}){1,}");
-
-  shell::setMode(true);  // imposta la modalita' di echo dei caratteri
-  cfgshell.__cmd__ = ""; // pulisce la variabile che indica l'ultimo comando
-
-  while (cfgshell.__mode__)
+  while ((iAux = sRow.find("|", iAux)) != std::string::npos)
   {
-    do
+    __PRTDBG__
+    iMaxStep++;
+    iAux += 1;
+  }
+
+  __PRTVAR__("iMaxStep", iMaxStep)
+
+  if (sRow.find("|") != std::string::npos)
+  {
+    bPipe = true;
+  }
+  else
+  {
+
+    bPipe = false;
+  }
+
+  iStep = 0;
+
+  while (it != end)
+  {
+    sTemp = *it;
+    ++it;
+
+    // Esempio di PIPE
+    // ls | grep | set | cat
+    //
+    // ls        > 1
+    // grep << 1 > 2
+    // set  << 2 > 3
+    // cat  << 3
+
+    __PRTVAR__("iStep", iStep)
+
+    if (bPipe)
     {
-      if (bInput)
+      __PRTDBG__
+
+      if (iStep == 0)
       {
-      ReturnToInput:
-        __command__.clear();
-        cfgshell.__inpRow__.clear();
-        std::cout << "\n...digita un comando valido oppure help per aiuto...\n";
-        std::cout << cfgshell.__cur_path__;
+        __PRTDBG__
 
-        if (__cmd__.size() == 0)
-        {
-          std::cin >> cfgshell.__inpRow__;
-          cfgshell.__inpRow__.trim();
-          cfgshell.__row__ = cfgshell.__inpRow__;
-        }
-        else
-        {
-          cfgshell.__row__ = __cmd__;
-
-          /*
-           * quando la shell viene avviata in modo trasparente e vi e' un unico comando da eseguire
-           * si disabilita l'ambiente di shell di modo che alla fine dell'esecuzione del comando il metodo viene
-           * abbandonato.
-           */
-          cfgshell.__mode__ = false;
-        }
-
-        iPipe = 0;
-        iStart = 0;
-        iEnd = cfgshell.__row__.size();
-        in = "";
-
-        while ((iEnd = cfgshell.__row__.find("|", iStart + 1)) !=
-               string::npos)
-        {
-          bInput = false;
-
-          out = "out" + to_string(iPipe) + ".tmp";
-
-          __command__.push_back(
-              shell::trim(cfgshell.__row__.substr(iStart, iEnd - iStart) +
-                          " > " + out + in));
-          iStart = iEnd + 1;
-
-          iPipe++;
-          in = " << " + out;
-        }
-
-        /* Inserimento ultimo comando della catena */
-        __command__.push_back(shell::trim(
-            cfgshell.__row__.substr(iStart, iEnd - iStart) + in));
-
-        /* estrazione del primo comando */
-        cfgshell.__row__ = __command__[0];
-        iAux = 1;
+        sFileOUT = "." + std::to_string(iStep) + ".tmp";
+        sTemp = sTemp + " > " + sFileOUT;
       }
       else
       {
-        /* estrazione dei comandi successivi */
-        if (iAux > iPipe)
-        {
-          bInput = true;
-
-          /*
-           * quando la shell viene avviata in modo trasparente e la catena della pipe
-           * e' esaurita allora si renede necessario terminare l'ambiente di shell.
-           */
-          if (__cmd__.size() > 0)
-            cfgshell.__mode__ = false;
-
-          goto ReturnToInput;
-        }
-        else
-        {
-          cfgshell.__row__ = __command__[iAux];
-          iAux++;
-        }
-      }
-    } while (!regex_search(cfgshell.__row__, result, r));
-
-    __PRTVAR__("command", cfgshell.__row__)
-
-    cfgshell.__cmd__ = result.str(0);
-
-    // ciclo di selezione del comando
-    if (result.str(0) == "ls")
-    { // esecuzione del comando ls ( comando interno )
-      shell::flag("((-(d|t))|>>|>)", cfgshell.__row__);
-      shell::ls(cfgshell.__cmd__);
-      cfgshell.__row__ = "";
-      shell::cleanFlag();
-    }
-
-    else if (result.str(0) == "format")
-    { // esecuzione del comando format ( comando interno )
-      shell::format();
-      cfgshell.__row__ = "";
-    }
-
-    else if (result.str(0) == "mv")
-    { // muove un file
-      shell::mv(cfgshell.__cmd__);
-      cfgshell.__row__ = "";
-    }
-
-    else if (result.str(0) == "echo")
-    { // imposta una variabile
-      __PRTDBG__;
-      shell::echo(cfgshell.__row__);
-      cfgshell.__row__ = "";
-    }
-
-    else if (result.str(0) == "set")
-    { // imposta una variabile
-      __PRTDBG__;
-      shell::set(cfgshell.__row__);
-      cfgshell.__row__ = "";
-    }
-
-    else if (result.str(0) == "rm")
-    { // muove un file
-      regex_search(cfgshell.__row__, result, f);
-      shell::rm(shell::getPath() + result.str(0));
-      cfgshell.__row__ = "";
-    }
-
-    else if (result.str(0) == "cls")
-    { // cancella lo schermo
-      std::cout << "\033[2J\033[1;1H";
-      cfgshell.__row__ = "";
-    }
-
-    else if (result.str(0) == "edlin")
-    { // esecuzione del comando edlin ( comando interno )
-      regex_search(cfgshell.__row__, result, f);
-      shell::edlin(result.str(0));
-      cfgshell.__row__ = "";
-    }
-
-    else if (result.str(0) == "cp")
-    { // esecuzione del comando ( comando interno )
-
-      regex_search(cfgshell.__row__, result, fo);
-      __files__ = shell::getPath() + result.str(0);
-      FILE = shell::s2S(shell::getPath() + result.str(0));
-      std::cout << "\n";
-      pFile = SPIFFS.open(FILE);
-      while (pFile.available())
-      {
-        std::cout << shell::S2s(pFile.readStringUntil('\n')) << "\n";
-      }
-      pFile.close();
-      cfgshell.__row__ = "";
-    }
-
-    else if (result.str(0) == "cat")
-    { // esecuzione del comando ( comando interno )
-
-      regex_search(cfgshell.__row__, result, f);
-      FILE = shell::s2S(shell::getPath() + result.str(0));
-      std::cout << "\n";
-      pFile = SPIFFS.open(FILE);
-      while (pFile.available())
-      {
-        std::cout << shell::S2s(pFile.readStringUntil('\n')) << "\n";
-      }
-      pFile.close();
-      cfgshell.__row__ = "";
-    }
-
-    else if (result.str(0) == "grep")
-    { // esecuzione del comando ( comando interno )
-      shell::flag("((--(reg|num))|<<|>>|>)", cfgshell.__row__);
-      shell::grep();
-      cfgshell.__row__ = "";
-      shell::cleanFlag();
-    }
-
-    else if (result.str(0) == "lora")
-    { // esecuzione del comando ( comando interno )
-      shell::flag("((--(set|rconf|mode|username|send|read))|<<|>>|>)", cfgshell.__row__);
-      shell::lora();
-      cfgshell.__row__ = "";
-      shell::cleanFlag();
-    }
-
-    else if (result.str(0) == "bt")
-    { // esecuzione del comando ( comando interno )
-      shell::flag("((--(set|send|read))|<<|(>>|>))", cfgshell.__row__);
-      shell::bt();
-      cfgshell.__row__ = "";
-      shell::cleanFlag();
-    }
-
-    else if (result.str(0) == "exit")
-    { // esecuzione del comando ( comando interno )
-      shell::setMode(false);
-      (aReg[0]).iPos = 0;
-    }
-  }
-
-  return false;
-}
-
-//************************************************************/
-//
-//       ID :
-// Descrive : pulisce la matrice dei flag
-//     Date :
-//   Author : Andrea Venuti
-//   return :
-//
-//************************************************************/
-void shell::cleanFlag()
-{
-  for (int iAux = 0; iAux < 6; iAux++)
-  {
-    shell::setFlag("", iAux);
-    shell::setPos(0, iAux);
-    shell::setValue("", iAux);
-  }
-}
-
-//************************************************************/
-//
-//       ID :
-// Descrive : gestisce una scheda lora
-//     Date :
-//   Author : Andrea Venuti
-//   return :
-//
-//************************************************************/
-void shell::lora()
-{
-
-  File pFileIN;
-  String sFO, sFI;
-
-  string sRow;
-  string sMode;
-  string sAUX;
-  string sTX;
-
-  smatch result;
-
-  __PRTDBG__
-
-  if ((shell::readFlag("<<")).size() > 0)
-  {
-
-    __PRTVAR__("file", shell::cfgshell.__cur_path__ + shell::readFlag("<<"))
-    sFI = s2S(shell::cfgshell.__cur_path__ + shell::readFlag("<<"));
-
-    if (SPIFFS.exists(sFI))
-    {
-      __PRTDBG__
-
-      pFileIN = SPIFFS.open(sFI);
-
-      __PRTDBG__
-
-      while (pFileIN.available())
-      {
-        sRow = S2s(pFileIN.readStringUntil('\n'));
-        __PRTVAR__("row file", sRow)
-        shell::LoRaParseConf(sRow);
         __PRTDBG__
+
+        sFileIN = sFileOUT;
+        sTemp = sTemp + " << " + sFileIN;
+        sFileOUT = "." + std::to_string(iStep) + ".tmp";
+        sTemp = sTemp + " > " + sFileOUT;
       }
-
-      pFileIN.close();
     }
-  }
-  else if ((shell::readFlag("--set")).size() > 0)
-  {
-    __PRTDBG__("flag", shell::readFlag("--set"));
-    shell::LoRaParseConf(shell::readFlag("--set"));
-  }
 
-  /*
-   * configurazione della scheda
-   */
-  if ((shell::readFlag("--rconf")).size() > 0)
-  {
-    __PRTDBG__("flag", shell::readFlag("--rconf"));
-    shell::LoRaReadConf();
-  }
+    if (bPipe && (iStep == iMaxStep))
+    {
+      __PRTDBG__
+      sTemp.replace(sTemp.find(" > " + sFileOUT), 3 + sFileOUT.length(), "");
+    }
 
-  /*
-   * Imposta il nome utente di un messaggio LoRa
-   */
-  if ((shell::readFlag("--username")).size() > 0)
-  {
-    __PRTDBG__
-    shell::set(" username=" + shell::readFlag("--username"));
-  }
+    __PRTVAR__("sTemp", sTemp)
 
-  /*
-   * Invia un messaggio in modo fixed
-   */
-  if ((shell::readFlag("--send")).size())
-  {
-    __PRTDBG__
-    shell::set("message=" + shell::readFlag("--send"));
-    shell::LoRaSend();
-  }
+    if (regex_search(sTemp, result, regCommand))
+    {
+      __PRTDBG__
 
-  /*
-   * Legge i messaggi in arrivo sulla board LoRa
-   */
-  if ((shell::readFlag("--read")).size())
-  {
-    __PRTDBG__
-    shell::LoRaRead();
+      sCommand = result.str(0);
+      __PRTVAR__("sCommand", sCommand)
+
+      shell::exec(sCommand, sTemp);
+
+      // if (bPipe && (iStep > 1))
+      // SPIFFS.remove(s2S(mVar["path"] + sFileIN));
+    }
+
+    iStep++;
   }
 }
 
-/*
- * Metodo per l'invio dei messaggi su LoRa
- */
-void shell::LoRaSend()
+//************************************************************/
+//
+// Descrive : avvia una sessione di shell in modo interattivo
+//     Date :
+//   Author : Andrea Venuti
+//
+//************************************************************/
+void shell::start()
 {
 
-  __PRTDBG__
+  input inpCommand; // oggetto di tipo input per l'inserimento dei comandi
+  string sRow;      // intero comando di riga
 
-  String sMESSAGE = s2S(mVar["message"]);
-  String sUSERNAME = s2S(mVar["username"]);
-  int iCH=stoi(mVar["ch"]);
-
-
-  Serial2.setPins(shell::myPIN["TX"], shell::myPIN["RX"]); // Arduino RX <-- e220 TX, Arduino TX --> e220 RX
-  LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
-
-  e220ttl.begin();
-  delay(500);
-
-  if (mVar["loramode"] == "FIXED")
+  // ciclo di lettura dei comandi
+  myBoard.bShell = true;
+  while (myBoard.bShell)
   {
-    __PRTDBG__
-
-    /* calola la dimesione reale del messaggio e del nome utente */
-    int strLenByteMessage = (sMESSAGE.length() + 1) * sizeof(char); // null char
-    int strLenByteUser = (sUSERNAME.length() + 1) * sizeof(char);   // null char
-
-    /* controlla se la dimensione del messaggio non ecceda quella riservata in struttura */
-    if (strLenByteMessage > (sizeof(messageLora.message) / sizeof(messageLora.message[0])))
-    {
-      __PRTDBG__
-
-      // message is longher than the buffer
-      sMESSAGE.toCharArray(messageLora.message, ((sizeof(messageLora.message) / sizeof(messageLora.message[0])) - 1));
-    }
-    else
-    {
-      __PRTDBG__
-
-      // message is SHORTER than the buffer
-      sMESSAGE.toCharArray(messageLora.message, sMESSAGE.length() + 1);
-    }
-
-    /* controlla se la dimensione dell username non ecceda quella riservata in struttura */
-    if (strLenByteUser > (sizeof(messageLora.user) / sizeof(messageLora.user[0])))
-    {
-      __PRTDBG__
-
-      // username is longher than the buffer
-      sUSERNAME.toCharArray(messageLora.user, ((sizeof(messageLora.user) / sizeof(messageLora.user[0])) - 1));
-    }
-    else
-    {
-      __PRTDBG__
-
-      // username is SHORTER than the buffer
-      sUSERNAME.toCharArray(messageLora.user, sUSERNAME.length() + 1);
-    }
-
-    __PRTDBG__
-
-    /* invia il messaggio */
-    ResponseStatus rs = e220ttl.sendBroadcastFixedMessage(iCH, &sMESSAGE, (uint8_t)sizeof(struct ChatMessage));
-    rs.getResponseDescription();
-    std::cout << ("\nMessage send: " + rs.getResponseDescription()).c_str();
-
-    __PRTDBG__
-  }
-  else
-  { // trasmisisone in modo non FIXED
-
-    __PRTDBG__
-
-
-    ResponseStatus rs = e220ttl.sendBroadcastFixedMessage(iCH, sMESSAGE);
-    rs.getResponseDescription();
-    std::cout << ("\nMessage send: " + rs.getResponseDescription()).c_str();
+    std::cout << "\n...digita un comando valido oppure help per aiuto...\n";
+    std::cout << mVar["path"];
+    sRow.clear();
+    inpCommand.clear();
+    std::cin >> inpCommand;
+    sRow = inpCommand;
+    shell::start(sRow);
   }
 
-} // end LoraSend
+} // END start
 
-/*
- * Legge un messaggio giunto sulla scheda LoRa
- */
-void shell::LoRaRead()
+//************************************************************/
+//
+// Descrive : esegue un comando di shell
+//     Date :
+//   Author : Andrea Venuti
+//
+//************************************************************/
+void shell::exec(string sCommand, string sRow)
 {
 
-  Serial2.setPins(shell::myPIN["TX"], shell::myPIN["RX"]); // Arduino RX <-- e220 TX, Arduino TX --> e220 RX
-  LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
-
-  e220ttl.begin();
-
-ReadLora:
-  delay(1000);
-
-  if (mVar["loramode"] == "FIXED")
-  {
-    __PRTDBG__
-
-    ResponseStructContainer rsc = e220ttl.receiveMessage((uint8_t)sizeof(struct ChatMessage));
-
-    // Is something goes wrong print error
-    if (rsc.status.code != 1)
-    {
-      __PRTDBG__
-
-      std::cout << rsc.status.getResponseDescription() << "\n";
-      goto ReadLora;
-    }
-    else
-    {
-      __PRTDBG__
-
-      // Print the data received
-      shell::ChatMessage sMessage = *(struct ChatMessage *)rsc.data;
-      std::cout << sMessage.user << "/" << sMessage.message << "\n";
-    }
-  }
-  else
-  {
-
-    // read the String message
-    ResponseContainer rc = e220ttl.receiveMessage();
-
-    // Is something goes wrong print error
-    if (rc.status.code != 1)
-    {
-      __PRTDBG__
-      rc.status.getResponseDescription();
-      goto ReadLora;
-    }
-    else
-    {
-      __PRTDBG__
-      // Print the data received
-      std::cout << rc.data << "\n";
-    }
-  }
-
-  goto ReadLora;
-
-}
-
-/*
- * Legge la configurazione della scheda LoRa
- */
-void shell::LoRaReadConf()
-{
-
-  String FO;
-  String sMODE;
-  File pFILE;
-
-  Serial2.setPins(shell::myPIN["TX"], shell::myPIN["RX"]); // Arduino RX <-- e220 TX, Arduino TX --> e220 RX
-  LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
-
-  e220ttl.begin();
-
-  ResponseStructContainer c;
-  c = e220ttl.getConfiguration();
-
-  // It's important get configuration pointer before all other operation
-  Configuration configuration = *(Configuration *)c.data;
-
-  ResponseStructContainer cMi;
-  cMi = e220ttl.getModuleInformation();
-  // It's important get information pointer before all other operation
-  ModuleInformation mi = *(ModuleInformation *)cMi.data;
-
-  if ((shell::readFlag(">>")).size() > 0)
-  {
-    __PRTDBG__
-    FO = shell::s2S(shell::getPath() + shell::readFlag(">>"));
-    pFILE = SPIFFS.open(FO.c_str(), "a+");
-  }
-  else if ((shell::readFlag(">")).size() > 0)
-  {
-    __PRTDBG__
-    FO = shell::s2S(shell::getPath() + shell::readFlag(">"));
-    pFILE = SPIFFS.open(FO.c_str(), "w");
-  }
-
-  __PRTVAR__("pFILE", pFILE)
-
-  if (pFILE)
-  {
-    __PRTDBG__
-
-    pFILE.println("");
-    pFILE.println(c.status.getResponseDescription());
-    pFILE.println(c.status.code);
-    pFILE.println("----------------------------------------");
-    pFILE.print(F("HEAD : "));
-    pFILE.print(configuration.COMMAND, DEC);
-    pFILE.print(" ");
-    pFILE.println(configuration.STARTING_ADDRESS, DEC);
-    pFILE.println(" ");
-    pFILE.println(configuration.LENGHT, HEX);
-    pFILE.println(F(" "));
-    pFILE.print(F("AddH : "));
-    pFILE.println(configuration.ADDH, DEC);
-    pFILE.print(F("AddL : "));
-    pFILE.println(configuration.ADDL, DEC);
-    pFILE.println(F(" "));
-    pFILE.print(F("Chan : "));
-    pFILE.print(configuration.CHAN, DEC);
-    pFILE.print(" -> ");
-    pFILE.println(configuration.getChannelDescription());
-    pFILE.println(F(" "));
-    pFILE.print(F("SpeedParityBit     : "));
-    pFILE.print(configuration.SPED.uartParity, BIN);
-    pFILE.print(" -> ");
-    pFILE.println(configuration.SPED.getUARTParityDescription());
-    pFILE.print(F("SpeedUARTDatte     : "));
-    pFILE.print(configuration.SPED.uartBaudRate, BIN);
-    pFILE.print(" -> ");
-    pFILE.println(configuration.SPED.getUARTBaudRateDescription());
-    pFILE.print(F("SpeedAirDataRate   : "));
-    pFILE.print(configuration.SPED.airDataRate, BIN);
-    pFILE.print(" -> ");
-    pFILE.println(configuration.SPED.getAirDataRateDescription());
-    pFILE.println(F(" "));
-    pFILE.print(F("OptionSubPacketSett: "));
-    pFILE.print(configuration.OPTION.subPacketSetting, BIN);
-    pFILE.print(" -> ");
-    pFILE.println(configuration.OPTION.getSubPacketSetting());
-    pFILE.print(F("OptionTranPower    : "));
-    pFILE.print(configuration.OPTION.transmissionPower, BIN);
-    pFILE.print(" -> ");
-    pFILE.println(configuration.OPTION.getTransmissionPowerDescription());
-    pFILE.print(F("OptionRSSIAmbientNo: "));
-    pFILE.print(configuration.OPTION.RSSIAmbientNoise, BIN);
-    pFILE.print(" -> ");
-    pFILE.println(configuration.OPTION.getRSSIAmbientNoiseEnable());
-    pFILE.println(F(" "));
-    pFILE.print(F("TransModeWORPeriod : "));
-    pFILE.print(configuration.TRANSMISSION_MODE.WORPeriod, BIN);
-    pFILE.print(" -> ");
-    pFILE.println(configuration.TRANSMISSION_MODE.getWORPeriodByParamsDescription());
-    pFILE.print(F("TransModeEnableLBT : "));
-    pFILE.print(configuration.TRANSMISSION_MODE.enableLBT, BIN);
-    pFILE.print(" -> ");
-    pFILE.println(configuration.TRANSMISSION_MODE.getLBTEnableByteDescription());
-    pFILE.print(F("TransModeEnableRSSI: "));
-    pFILE.print(configuration.TRANSMISSION_MODE.enableRSSI, BIN);
-    pFILE.print(" -> ");
-    pFILE.println(configuration.TRANSMISSION_MODE.getRSSIEnableByteDescription());
-    pFILE.print(F("TransModeFixedTrans: "));
-    pFILE.print(configuration.TRANSMISSION_MODE.fixedTransmission, BIN);
-    pFILE.print(" -> ");
-    pFILE.println(configuration.TRANSMISSION_MODE.getFixedTransmissionDescription());
-    pFILE.println("----------------------------------------");
-    pFILE.print(F("HEAD: "));
-    pFILE.print(mi.COMMAND, DEC);
-    pFILE.print(" ");
-    pFILE.print(mi.STARTING_ADDRESS, DEC);
-    pFILE.print(" ");
-    pFILE.println(mi.LENGHT, DEC);
-    pFILE.print(F("Model no.: "));
-    pFILE.println(mi.model, DEC);
-    pFILE.print(F("Version  : "));
-    pFILE.println(mi.version, DEC);
-    pFILE.print(F("Features : "));
-    pFILE.println(mi.features, DEC);
-    pFILE.println("----------------------------------------");
-
-    pFILE.close();
-  }
-  else
-  {
-    __PRTDBG__
-
-    Serial.println();
-    Serial.println(c.status.getResponseDescription());
-    Serial.println(c.status.code);
-    Serial.println("----------------------------------------");
-    Serial.print(F("HEAD : "));
-    Serial.print(configuration.COMMAND, DEC);
-    Serial.print(" ");
-    Serial.print(configuration.STARTING_ADDRESS, DEC);
-    Serial.print(" ");
-    Serial.println(configuration.LENGHT, HEX);
-    Serial.println(F(" "));
-    Serial.print(F("AddH : "));
-    Serial.println(configuration.ADDH, DEC);
-    Serial.print(F("AddL : "));
-    Serial.println(configuration.ADDL, DEC);
-    Serial.println(F(" "));
-    Serial.print(F("Chan : "));
-    Serial.print(configuration.CHAN, DEC);
-    Serial.print(" -> ");
-    Serial.println(configuration.getChannelDescription());
-    Serial.println(F(" "));
-    Serial.print(F("SpeedParityBit     : "));
-    Serial.print(configuration.SPED.uartParity, BIN);
-    Serial.print(" -> ");
-    Serial.println(configuration.SPED.getUARTParityDescription());
-    Serial.print(F("SpeedUARTDatte     : "));
-    Serial.print(configuration.SPED.uartBaudRate, BIN);
-    Serial.print(" -> ");
-    Serial.println(configuration.SPED.getUARTBaudRateDescription());
-    Serial.print(F("SpeedAirDataRate   : "));
-    Serial.print(configuration.SPED.airDataRate, BIN);
-    Serial.print(" -> ");
-    Serial.println(configuration.SPED.getAirDataRateDescription());
-    Serial.println(F(" "));
-    Serial.print(F("OptionSubPacketSett: "));
-    Serial.print(configuration.OPTION.subPacketSetting, BIN);
-    Serial.print(" -> ");
-    Serial.println(configuration.OPTION.getSubPacketSetting());
-    Serial.print(F("OptionTranPower    : "));
-    Serial.print(configuration.OPTION.transmissionPower, BIN);
-    Serial.print(" -> ");
-    Serial.println(configuration.OPTION.getTransmissionPowerDescription());
-    Serial.print(F("OptionRSSIAmbientNo: "));
-    Serial.print(configuration.OPTION.RSSIAmbientNoise, BIN);
-    Serial.print(" -> ");
-    Serial.println(configuration.OPTION.getRSSIAmbientNoiseEnable());
-    Serial.println(F(" "));
-    Serial.print(F("TransModeWORPeriod : "));
-    Serial.print(configuration.TRANSMISSION_MODE.WORPeriod, BIN);
-    Serial.print(" -> ");
-    Serial.println(configuration.TRANSMISSION_MODE.getWORPeriodByParamsDescription());
-    Serial.print(F("TransModeEnableLBT : "));
-    Serial.print(configuration.TRANSMISSION_MODE.enableLBT, BIN);
-    Serial.print(" -> ");
-    Serial.println(configuration.TRANSMISSION_MODE.getLBTEnableByteDescription());
-    Serial.print(F("TransModeEnableRSSI: "));
-    Serial.print(configuration.TRANSMISSION_MODE.enableRSSI, BIN);
-    Serial.print(" -> ");
-    Serial.println(configuration.TRANSMISSION_MODE.getRSSIEnableByteDescription());
-    Serial.print(F("TransModeFixedTrans: "));
-    Serial.print(configuration.TRANSMISSION_MODE.fixedTransmission, BIN);
-    Serial.print(" -> ");
-    Serial.println(configuration.TRANSMISSION_MODE.getFixedTransmissionDescription());
-    Serial.println("----------------------------------------");
-    Serial.print(F("HEAD: "));
-    Serial.print(mi.COMMAND, DEC);
-    Serial.print(" ");
-    Serial.print(mi.STARTING_ADDRESS, DEC);
-    Serial.print(" ");
-    Serial.println(mi.LENGHT, DEC);
-    Serial.print(F("Model no.: "));
-    Serial.println(mi.model, DEC);
-    Serial.print(F("Version  : "));
-    Serial.println(mi.version, DEC);
-    Serial.print(F("Features : "));
-    Serial.println(mi.features, DEC);
-    Serial.println("----------------------------------------");
-  }
-}
-
-/*
- * void LoraSetConf()  imposta una configurazione per la board LoRa
- *
- * Parametri ammessi :
- *
- *
- */
-void shell::LoRaParseConf(string __cmd__)
-{
-
-  int iPOS;
-  string sValue;
-  string sName;
-
-  __PRTVAR__("__cmd__", __cmd__)
-
-  // pattern di ricerca
-  regex patternSET("(( )*(addl|addh|ch|uartbr|uartp|airdr|packet|rnoise|tpow|re|ftx|lbt|wor|save)( )*=( )*[\\w]*)");
-
-  // Oggetti iterator per iterare sulle corrispondenze
-  std::sregex_iterator iteratore(__cmd__.begin(), __cmd__.end(), patternSET);
-  std::sregex_iterator fineIteratore;
-
-  // Iterare sulle corrispondenze
-  while (iteratore != fineIteratore)
-  {
-    std::smatch corrispondenza = *iteratore;
-    std::string parola = corrispondenza.str();
-
-    iPOS = parola.find("=", 0);
-    sName = shell::trim(parola.substr(0, iPOS));
-    sValue = shell::trim(parola.substr(iPOS + 1, parola.length()));
-
-    __PRTVAR__("sName", sName)
-    __PRTVAR__("sValue", sValue)
-    shell::LoRaSetConf(sName, sValue);
-
-    ++iteratore;
-  }
-}
-
-/*
- * Imposta la configurazione della board LoRa
- */
-void shell::LoRaSetConf(string sVar, string sVal)
-{
-
-  shell::trim(sVal);
-  shell::trim(sVar);
-
-  /*
-   * Definisce la mappa dei valori della velocita' della UART
-   */
-  std::map<std::string, int> uartb;
-
-  uartb["UART_BPS_1200"] = UART_BPS_1200;
-  uartb["UART_BPS_2400"] = UART_BPS_2400;
-  uartb["UART_BPS_4800"] = UART_BPS_4800;
-  uartb["UART_BPS_9600"] = UART_BPS_9600;
-  uartb["UART_BPS_19200"] = UART_BPS_19200;
-  uartb["UART_BPS_38400"] = UART_BPS_38400;
-  uartb["UART_BPS_57600"] = UART_BPS_57600;
-  uartb["UART_BPS_115200"] = UART_BPS_115200;
-
-  /*
-   * Definisce la mappa della parita' della porta UART
-   */
-  std::map<std::string, int> uartp;
-
-  uartp["MODE_00_8N1"] = MODE_00_8N1;
-  uartp["MODE_01_8O1"] = MODE_01_8O1;
-  uartp["MODE_10_8E1"] = MODE_10_8E1;
-  uartp["MODE_11_8N1"] = MODE_11_8N1;
-
-  /*
-   * definisce la mappa delle opzioni della vecolita' di trasmissione
-   */
-
-  std::map<std::string, int> air;
-
-  air["AIR_DATA_RATE_000_24"] = AIR_DATA_RATE_000_24;
-  air["AIR_DATA_RATE_001_24"] = AIR_DATA_RATE_001_24;
-  air["AIR_DATA_RATE_010_24"] = AIR_DATA_RATE_010_24;
-  air["AIR_DATA_RATE_011_48"] = AIR_DATA_RATE_011_48;
-  air["AIR_DATA_RATE_100_96"] = AIR_DATA_RATE_100_96;
-  air["AIR_DATA_RATE_101_192"] = AIR_DATA_RATE_101_192;
-  air["AIR_DATA_RATE_110_384"] = AIR_DATA_RATE_110_384;
-  air["AIR_DATA_RATE_111_625"] = AIR_DATA_RATE_111_625;
-
-  /*
-   * Imposta la dimensione del pacchetto trasmesso
-   */
-  std::map<std::string, int> packet;
-
-  packet["SPS_200_00"] = SPS_200_00;
-  packet["SPS_128_01"] = SPS_128_01;
-  packet["SPS_064_10"] = SPS_064_10;
-  packet["SPS_032_11"] = SPS_032_11;
-
-  /*
-   * imposta la gestione del rumore di fondo
-   */
-  std::map<std::string, int> rssi;
-
-  rssi["RSSI_AMBIENT_NOISE_ENABLED"] = RSSI_AMBIENT_NOISE_ENABLED;
-  rssi["RSSI_AMBIENT_NOISE_DISABLED"] = RSSI_AMBIENT_NOISE_DISABLED;
-
-  /*
-   * Impost la potenza di trasmissione
-   */
-  std::map<std::string, int> ptx;
-
-  ptx["POWER_22"] = POWER_22;
-  ptx["POWER_17"] = POWER_17;
-  ptx["POWER_13"] = POWER_13;
-  ptx["POWER_10"] = POWER_10;
-
-  /*
-   * Imposta il modo di funzionamento della scheda
-   */
-  std::map<std::string, int> mode;
-
-  mode["FT_FIXED_TRANSMISSION"] = FT_FIXED_TRANSMISSION;
-  mode["FT_TRANSPARENT_TRANSMISSION"] = FT_TRANSPARENT_TRANSMISSION;
-
-  /*
-   * Monitoraggio dei dati in trasmissione
-   */
-  std::map<std::string, int> mtx;
-
-  mtx["LBT_ENABLED"] = LBT_ENABLED;
-  mtx["LBT_DISABLED"] = LBT_DISABLED;
-
-  /*
-   * Impostazione della modalita wor
-   */
-  std::map<std::string, int> wor;
-
-  // wor["WAKE_UP_500"] = WAKE_UP_500;
-  // wor["WAKE_UP_1000"] = WAKE_UP_1000;
-  // wor["WAKE_UP_1500"] = WAKE_UP_1500;
-  // wor["WAKE_UP_2000"] = WAKE_UP_2000;
-  // wor["WAKE_UP_2500"] = WAKE_UP_2500;
-  // wor["WAKE_UP_3000"] = WAKE_UP_3000;
-  // wor["WAKE_UP_3500"] = WAKE_UP_3500;
-  // wor["WAKE_UP_4000"] = WAKE_UP_4000;
-
-  /*
-   * Bit di parita'
-   */
-  std::map<std::string, int> re;
-  re["RSSI_ENABLED"] = RSSI_ENABLED;
-  re["RSSI_DISABLED"] = RSSI_DISABLED;
-
-  /*
-   * Salva la configurazione
-   */
-  std::map<std::string, int> save;
-  save["YES"] = 1;
-  save["NO"] = 0;
-
-  __PRTDBG__
-
-  Serial2.setPins(shell::myPIN["TX"], shell::myPIN["RX"]); // Arduino RX <-- e220 TX, Arduino TX --> e220 RX
-
-  __PRTDBG__
-
-  LoRa_E220 e220ttl(&Serial2, shell::myPIN["AUX"], shell::myPIN["M0"], shell::myPIN["M1"]);
-
-  __PRTDBG__
-
-  e220ttl.begin();
-
-  __PRTDBG__
-
-  ResponseStructContainer c;
-  c = e220ttl.getConfiguration();
-  // It's important get configuration pointer before all other operation
-  Configuration config = *(Configuration *)c.data;
-
-  Serial.print(c.status.getResponseDescription());
-  Serial.print("  ");
-  Serial.println(c.status.code);
-
-  if (sVar == "addl")
-  {
-    __PRTVAR__("addl", sVal)
-    config.ADDL = stoi(sVal);
-  }
-  else if (sVar == "addh")
-  {
-    __PRTVAR__("addh", sVal)
-    config.ADDH = stoi(sVal);
-  }
-  else if (sVar == "ch")
-  {
-    __PRTVAR__("ch", sVal)
-    config.CHAN = stoi(sVal);
-  }
-  else if (sVar == "uartbr")
-  {
-    config.SPED.uartBaudRate = uartb[sVar];
-  }
-  else if (sVar == "uartp")
-  {
-    config.SPED.uartParity = uartp[sVal];
-  }
-  else if (sVar == "airdr")
-  {
-    config.SPED.airDataRate = air[sVal];
-  }
-  else if (sVar == "paket")
-  {
-    config.OPTION.subPacketSetting = packet[sVal];
-  }
-  else if (sVar == "rnoise")
-  {
-    config.OPTION.RSSIAmbientNoise = rssi[sVal];
-  }
-  else if (sVar == "tpow")
-  {
-    config.OPTION.transmissionPower = ptx[sVal];
-  }
-  else if (sVar == "re")
-  {
-  }
-  else if (sVar == "ftx")
-  {
-    config.TRANSMISSION_MODE.fixedTransmission = mode[sVal];
-  }
-  else if (sVar == "lbt")
-  {
-    config.TRANSMISSION_MODE.enableLBT = mtx[sVal];
-  }
-  else if (sVar == "wor")
-  {
-    config.TRANSMISSION_MODE.WORPeriod = wor[sVal];
-  }
-
-  // Set configuration changed and set to not hold the configuration
-  if (save[sVal])
-  {
-    ResponseStatus rs = e220ttl.setConfiguration(config, WRITE_CFG_PWR_DWN_SAVE);
-    Serial.print(rs.getResponseDescription());
-    Serial.print("   ");
-    Serial.println(rs.code);
-  }
-  else
-  {
-    ResponseStatus rs = e220ttl.setConfiguration(config, WRITE_CFG_PWR_DWN_LOSE);
-    Serial.println(rs.getResponseDescription());
-    Serial.println(rs.code);
-  }
-}
-
-/*
- * void bt()  gestione del bt
- *
- * Parametri ammessi :
- *
- *
- */
-void shell::bt()
-{
-
-  char cCH;
-
+  String sPTH;
   smatch result;
 
-  string sMode;
-  string sFile;
-
-  File pFile;
-
-  /*
-   * Imposta la scheda bluetooth
-   */
-  if ((shell::readFlag("--set")).size() > 0)
+  // ╔╗      ╔╗
+  // ║║      ║║
+  // ║╚═╗╔══╗║║ ╔══╗
+  // ║╔╗║║╔╗║║║ ║╔╗║
+  // ║║║║║║═╣║╚╗║╚╝║
+  // ╚╝╚╝╚══╝╚═╝║╔═╝
+  //            ║║
+  //            ╚╝
+  if (sCommand == "help")
   {
-    // shell::BTSerial.begin(9600);
-    shell::set("set btname=" + shell::readFlag("--set"));
-    shell::BTSerial.begin(s2S(shell::readFlag("--set")));
+    edlin myEdit("/help.txt");
+    myEdit.edit();
+    sRow.clear();
   }
 
-  /*
-   * Invia un messaggio sulla seriale bluetooth letto da tastiera
-   */
-  if ((shell::readFlag("--send")).size() > 0)
+  // ╔╗
+  // ║║
+  // ║║ ╔══╗
+  // ║║ ║══╣
+  // ║╚╗╠══║
+  // ╚═╝╚══╝
+  if (sCommand == "ls")
   {
-    shell::BTSerial.println(s2S(shell::readFlag("--send")).c_str());
-  }
 
-  /*
-   * Invia i dati letti da file al BT
-   */
-  sFile = shell::readFlag("<<");
-  __PRTVAR__("sFile", sFile)
+    __PRTVAR__("sRow", sRow)
 
-  if (sFile.size() > 0)
-  {
-    regex file("(([\\w.-_!~]+)$)");
-    regex_search(sFile, result, file);
-    sFile = result.str(0);
-    pFile = SPIFFS.open(s2S(shell::cfgshell.__cur_path__ + sFile));
+    regex regFile("(>>|>)( )*([(\\w)-\\._]{1,}){1,}");
 
-    while (pFile.available())
+    // controlla se il commando contiene opzioni
+    if (regex_search(sRow, result, regFile))
     {
-      shell::BTSerial.println(pFile.readStringUntil('\n').c_str());
+
+      // estrae la sottostringa corripondente all regFile
+      sCommand = result.str(0);
+      __PRTVAR__("sCommand", sCommand)
+
+      // l'output e' verso un file
+      String sFILE; // nome del file
+      String sMODE; // modo di scrittura
+
+      // stabilisce il modo di scrittura
+      regex regFileAppend("(>>)");
+      if (regex_search(sCommand, result, regFileAppend))
+        sMODE = "a"; // modo append
+      else
+        sMODE = "w+"; // modo overwrite
+
+      // estrae il nome del file di output
+      regex regFileName("(([(\\w)-\\._]{0,}){1,})$");
+      if (regex_search(sCommand, result, regFileName))
+      {
+        sFILE = s2S(result.str(0));
+      }
+
+      __PRTVAR__("sFILE", S2s(sFILE))
+      __PRTVAR__("sMODE", S2s(sMODE))
+
+      shell::ls(s2S(mVar["path"]), s2S(mVar["path"]) + sFILE, sMODE);
+    } // end blocco che processa le opzioni
+    else
+    {
+      // il comando non contiene opzioni
+      __PRTVAR__("path", mVar["path"])
+      shell::ls(s2S(mVar["path"]));
+    } // end
+
+    // esecuzione del comando ls ( comando interno )
+    sRow.clear();
+  }
+
+  //  ╔═╗                 ╔╗
+  //  ║╔╝                ╔╝╚╗
+  // ╔╝╚╗╔══╗╔═╗╔╗╔╗╔══╗ ╚╗╔╝
+  // ╚╗╔╝║╔╗║║╔╝║╚╝║╚ ╗║  ║║
+  //  ║║ ║╚╝║║║ ║║║║║╚╝╚╗ ║╚╗
+  //  ╚╝ ╚══╝╚╝ ╚╩╩╝╚═══╝ ╚═╝
+  else if (sCommand == "format")
+  { // esecuzione del comando format ( comando interno )
+    shell::format();
+    sRow.clear();
+  }
+
+  // ╔╗╔╗╔╗╔╗
+  // ║╚╝║║╚╝║
+  // ║║║║╚╗╔╝
+  // ╚╩╩╝ ╚╝
+  else if (sCommand == "mv")
+  { // muove un file
+
+    String sFILES;
+    String sFILED;
+
+    regex regMV("[^mv( )*](([(\\w)-\\._]{0,}){1,})( )*(([(\\w)-\\._]{0,}){1,})");
+    sCommand.clear();
+    if (regex_search(sRow, result, regMV))
+    {
+      sCommand = result.str(0);
+
+      // regole di estrazione dei nomi dei file
+      regex regFileS("^(([(\\w)-\\._]{0,}){1,})");
+      regex regFileD("(([(\\w)-\\._]{0,}){1,})$");
+
+      // estrazione del nome file origine
+      if (regex_search(sCommand, result, regFileS))
+        sFILES = s2S(result.str(0));
+
+      // estrazione del nome file origine
+      if (regex_search(sCommand, result, regFileD))
+        sFILED = s2S(result.str(0));
+
+      shell::mv(s2S(mVar["path"]) + sFILES, s2S(mVar["path"]) + sFILED);
     }
 
-    pFile.close();
+    sRow.clear();
   }
 
-  /*
-   * stampa a video i dati letti dal BT
-   */
-  if ((shell::readFlag("--read")).size() > 0)
+  // ╔═╗╔╗╔╗
+  // ║╔╝║╚╝║
+  // ║║ ║║║║
+  // ╚╝ ╚╩╩╝
+  else if (sCommand == "rm")
+  { // muove un file
+    String sFILE;
+
+    regex regFile("(([(\\w)-\\._]{0,}){1,})$");
+
+    if (regex_search(sRow, result, regFile))
+      shell::rm(s2S(mVar["path"]) + s2S(result.str(0)));
+
+    sRow.clear();
+  }
+
+  // ╔══╗╔══╗
+  // ║╔═╝║╔╗║
+  // ║╚═╗║╚╝║
+  // ╚══╝║╔═╝
+  //     ║║
+  //     ╚╝
+  else if (sCommand == "cp")
+  {
+
+    String sFILES;
+    String sFILED;
+
+    regex regMV("[^cp( )*](([(\\w)-\\._]{0,}){1,})( )*(([(\\w)-\\._]{0,}){1,})");
+    sCommand.clear();
+    if (regex_search(sRow, result, regMV))
+    {
+      sCommand = result.str(0);
+
+      // regole di estrazione dei nomi dei file
+      regex regFileS("^(([(\\w)-\\._]{0,}){1,})");
+      regex regFileD("(([(\\w)-\\._]{0,}){1,})$");
+
+      // estrazione del nome file origine
+      if (regex_search(sCommand, result, regFileS))
+        sFILES = s2S(result.str(0));
+
+      // estrazione del nome file origine
+      if (regex_search(sCommand, result, regFileD))
+        sFILED = s2S(result.str(0));
+
+      shell::cp(s2S(mVar["path"]) + sFILES, s2S(mVar["path"]) + sFILED);
+      sRow.clear();
+    }
+  }
+
+  //         ╔╗
+  //         ║║
+  // ╔══╗╔══╗║╚═╗╔══╗
+  // ║╔╗║║╔═╝║╔╗║║╔╗║
+  // ║║═╣║╚═╗║║║║║╚╝║
+  // ╚══╝╚══╝╚╝╚╝╚══╝
+  else if (sCommand == "echo")
+  { // imposta una variabile
+    __PRTDBG__;
+    shell::echo(sRow);
+    sRow.clear();
+  }
+
+  //          ╔╗
+  //         ╔╝╚╗
+  // ╔══╗╔══╗╚╗╔╝
+  // ║══╣║╔╗║ ║║
+  // ╠══║║║═╣ ║╚╗
+  // ╚══╝╚══╝ ╚═╝
+  else if (sCommand == "set")
+  { // imposta una variabile
+    __PRTDBG__;
+    shell::set(sRow);
+    sRow.clear();
+  }
+
+  //     ╔╗
+  //     ║║
+  // ╔══╗║║ ╔══╗
+  // ║╔═╝║║ ║══╣
+  // ║╚═╗║╚╗╠══║
+  // ╚══╝╚═╝╚══╝
+  else if (sCommand == "cls")
+  { // cancella lo schermo
+    std::cout << "\033[2J\033[1;1H";
+    sRow.clear();
+  }
+
+  //       ╔╗╔╗
+  //       ║║║║
+  // ╔══╗╔═╝║║║ ╔╗╔══╗
+  // ║╔╗║║╔╗║║║ ╠╣║╔╗║
+  // ║║═╣║╚╝║║╚╗║║║║║║
+  // ╚══╝╚══╝╚═╝╚╝╚╝╚╝
+  else if (sCommand == "edlin")
+  { // entra in modalita edit
+    regex regFile("(([(\\w)-\\._]{0,}){1,})$");
+    if (regex_search(sRow, result, regFile))
+    {
+      __PRTVAR__("file", result.str(0))
+      edlin myEdit(s2S(mVar["path"]) + s2S(result.str(0)));
+      myEdit.edit();
+    }
+    sRow.clear();
+  }
+
+  //           ╔╗
+  //          ╔╝╚╗
+  // ╔══╗╔══╗ ╚╗╔╝
+  // ║╔═╝╚╗ ║  ║║
+  // ║╚═╗║╚╝╚╗ ║╚╗
+  // ╚══╝╚═══╝ ╚═╝
+  else if (sCommand == "cat")
+  { // esecuzione del comando ( comando interno )
+    regex regFile("(([(\\w)-\\._]{0,}){1,})$");
+    if (regex_search(sRow, result, regFile))
+    {
+      __PRTVAR__("file", result.str(0))
+      if (SPIFFS.exists(s2S("/" + result.str(0))))
+      {
+        File pFILE = SPIFFS.open(s2S("/" + result.str(0)));
+
+        Serial.println("");
+
+        while (pFILE.available())
+        {
+          Serial.println(pFILE.readStringUntil('\n'));
+        }
+        pFILE.close();
+      }
+    }
+    sRow.clear();
+  }
+
+  // ╔═══╗
+  // ║╔═╗║
+  // ║║ ╚╝╔═╗╔══╗╔══╗
+  // ║║╔═╗║╔╝║╔╗║║╔╗║
+  // ║╚╩═║║║ ║║═╣║╚╝║
+  // ╚═══╝╚╝ ╚══╝║╔═╝
+  //             ║║
+  //             ╚╝
+  else if (sCommand == "grep")
+  { // esecuzione del comando ( comando interno )
+    string sReg;
+    string sFileIN;
+    string sFileOUT;
+    String sMODE;
+
+    int iStart = 0;
+    int iEndIN = 0;
+    int iEndOUT = 0;
+    int iEndMax = 0;
+    int iEndMin = 0;
+    int iEnd = sRow.length();
+
+    std::regex regPattern("--reg\\s+(\\S+)|<<(\\s*\\S+)|>>(\\s*\\S+)|>(\\s*\\S+)");
+    std::sregex_iterator it(sRow.begin(), sRow.end(), regPattern);
+    std::sregex_iterator end;
+
+    __PRTVAR__("sRow", sRow)
+
+    while (it != end)
+    {
+      std::smatch match = *it;
+
+      if ((*it)[1].matched)
+      {
+        iStart = match.position() + 5;
+        __PRTVAR__("iStart", iStart)
+      }
+      if ((*it)[2].matched)
+      {
+        iEndIN = match.position();
+        sFileIN = shell::trim((*it)[2].str());
+
+        __PRTVAR__("sFileIN", sFileIN)
+        __PRTVAR__("iEndIN", iEndIN)
+      }
+      if ((*it)[3].matched)
+      {
+        iEndOUT = match.position();
+        sFileOUT = shell::trim((*it)[3].str());
+        sMODE = "a+";
+
+        __PRTVAR__("sFileOUT", sFileOUT)
+        __PRTVAR__("iEndOUT", iEndOUT)
+      }
+      if ((*it)[4].matched)
+      {
+        iEndOUT = match.position();
+        sFileOUT = shell::trim((*it)[4].str());
+        sMODE = "w";
+
+        __PRTVAR__("sFileOUT", sFileOUT)
+        __PRTVAR__("iEndOUT", iEndOUT)
+      }
+      ++it;
+    }
+
+    __PRTDBG__
+
+    /* ricerca del massimo e del minimo delle posizioni dei redirect */
+    if (iEndIN < iEndOUT)
+    {
+      iEndMin = iEndIN;
+      iEndMax = iEndOUT;
+    }
+    else
+    {
+      iEndMin = iEndOUT;
+      iEndMax = iEndIN;
+    }
+
+    __PRTVAR__("iEndMax", iEndMax)
+    __PRTVAR__("iEndMin", iEndMin)
+
+    /* ricerca della posizione della reg rispetto ai redirect */
+    if (iStart > iEndMin && iStart < iEndMax)
+      iEnd = iEndMax;
+    else if (iStart > iEndMax)
+      iEnd = sRow.length();
+    else if (iStart < iEndMin)
+      iEnd = iEndMin;
+
+    sReg = shell::trim(sRow.substr(iStart, iEnd - iStart));
+    __PRTVAR__("sReg", sReg)
+
+    if (sFileOUT.length() > 0)
+    {
+      __PRTDBG__
+      shell::grep(sReg, s2S(mVar["path"] + sFileIN), s2S(mVar["path"] + sFileOUT), sMODE);
+    }
+    else
+    {
+      __PRTDBG__
+      String sFILEIN = s2S(mVar["path"] + sFileIN);
+      shell::grep(sReg, sFILEIN);
+      __PRTDBG__
+    }
+
+    sRow.clear();
+  }
+
+  // ╔╗       ╔═══╗
+  // ║║       ║╔═╗║
+  // ║║   ╔══╗║╚═╝║╔══╗
+  // ║║ ╔╗║╔╗║║╔╗╔╝╚ ╗║
+  // ║╚═╝║║╚╝║║║║╚╗║╚╝╚╗
+  // ╚═══╝╚══╝╚╝╚═╝╚═══╝
+  else if (sCommand == "lora")
   {
     __PRTDBG__
 
-    if (shell::BTSerial.available())
+#ifndef __MYLORA__
+#define __MYLORA__
+    static LoRa lr;
+    lr.init();
+#endif
+
+    std::string sTag;
+    std::string sValue;
+
+    /*
+     * --rconf : legge la configurazione della scheda
+     * --set   : imposta i singoli parametri della scheda
+     * --send  : invia un messaggio da console
+     * --lconf : carica una configurazione da file
+     */
+
+    std::regex reg("(--rconf|--set|--send|>>|>)");
+    std::regex regSend("(addh|addl|ch|file)(=)(\\s+(\\S+))");
+
+    /* In questa versione dell'espressione regolare (\w+)=(\w+(\.\w+)?),
+       la parte (\w+(\.\w+)?) cattura il valore. La parte \w+ cattura una
+       sequenza di caratteri alfanumerici, e (\.\w+)? indica che può esserci
+       una parte opzionale con un punto seguito da una sequenza di caratteri
+       alfanumerici. In questo modo, i valori che contengono il carattere punto
+       saranno catturati correttamente.
+       */
+    std::regex regOpt("(\\w+)=(\\w+(\\.\\w+)?)");
+
+    std::sregex_iterator it(sRow.begin(), sRow.end(), reg);
+    std::sregex_iterator end;
+
+    /* rimuove tutti i - finali */
+    while (!sRow.empty() && sRow.back() == '-')
+      sRow.pop_back();
+
+    sRow = sRow + " --";
+
+    __PRTVAR__("sRow", sRow)
+
+    while (it != end)
     {
+      std::smatch match = *it;
+      sTag = match[0];
 
-      std::cout << "\n";
+      __PRTVAR__("sTag", sTag)
+      __PRTVAR__("match[0]", match[0])
+      __PRTVAR__("match[1]", match[1])
+      __PRTVAR__("match[2]", match[2])
 
-      while (shell::BTSerial.available())
+      //                 ╔═╗
+      //                 ║╔╝
+      // ╔═╗╔══╗╔══╗╔══╗╔╝╚╗
+      // ║╔╝║╔═╝║╔╗║║╔╗╗╚╗╔╝
+      // ║║ ║╚═╗║╚╝║║║║║ ║║
+      // ╚╝ ╚══╝╚══╝╚╝╚╝ ╚╝
+      /* legge la configurazione della board */
+      if (sTag == "--rconf")
       {
-        String sMESSAGGIO = shell::BTSerial.readStringUntil('\n');
-        if (pFile)
-        {
-          pFile.println(sMESSAGGIO);
-        }
-        else
-        {
-          regex lr("(lora/)[\\w+\\.\\-@&_/ :;\\[\\]=\\(\\)\\|\\#\\.\\$\\{\\}\\?]*");
-          string sMessaggio = S2s(sMESSAGGIO);
+        __PRTDBG__
+        std::cout << std::endl;
+        lr.rlConf();
+      }
 
-          if (regex_search(sMessaggio, result, lr))
+      //          ╔╗
+      //         ╔╝╚╗
+      // ╔══╗╔══╗╚╗╔╝
+      // ║══╣║╔╗║ ║║
+      // ╠══║║║═╣ ║╚╗
+      // ╚══╝╚══╝ ╚═╝
+      /* Imposta la configurazione della board */
+      if (sTag == "--set")
+      {
+        __PRTVAR__("tag", sTag + "\\s+(.*?)\\s+--")
+        std::regex regPattern(sTag + "\\s+(.*?)\\s+--");
+
+        /* controlla se l'ultima regexp trova corrispondenza nella stringa */
+        if (std::regex_search(sRow, result, regPattern))
+        {
+
+          __PRTVAR__("result[0]", result[0])
+          __PRTVAR__("result[1]", result[1])
+          __PRTVAR__("result[2]", result[2])
+
+          /* imposta la configurazione della board */
+          std::string sOpt = result[1];
+
+          /* ciclo di estrazione delle opzioni */
+          std::sregex_iterator opt(sOpt.begin(), sOpt.end(), regOpt);
+          std::sregex_iterator endOpt;
+
+          while (opt != endOpt)
           {
-            shell::set("messaggio=" + sMessaggio);
-            shell::LoRaSend();
+            std::smatch match = *opt;
+
+            __PRTVAR__("match[0]", match[0])
+            __PRTVAR__("match[1]", match[1])
+            __PRTVAR__("match[2]", match[2])
+
+            /* imposta la configurazione da file */
+            if (match[1] == "file")
+            {
+              std::string sFile = (std::string)match[2];
+              sFile = mVar["path"] + sFile;
+
+              __PRTVAR__("sFile", sFile)
+
+              lr.slConf(s2S(sFile));
+            }
+            else
+            /* oppure da riga di comando */
+            {
+              lr.slConf(match[2], match[1]);
+            }
+            ++opt;
+          }
+        }
+      }
+
+      //               ╔╗
+      //               ║║
+      // ╔══╗╔══╗╔══╗╔═╝║
+      // ║══╣║╔╗║║╔╗║║╔╗║
+      // ╠══║║║═╣║║║║║╚╝║
+      // ╚══╝╚══╝╚╝╚╝╚══╝
+      // invia un messaggio da riga di comando
+      if (sTag == "--send")
+      {
+        String sMSG;
+
+        std::string username;
+
+        int iCH = 23;
+        int iADDL = 0;
+        int iADDH = 1;
+        String sFILE, sUSERNAME;
+        string sMode;
+
+        input inpROW;
+
+        __PRTVAR__("tag", sTag + "\\s+(.*?)\\s+--")
+        std::regex regPattern(sTag + "\\s+(.*?)\\s+--");
+
+        /* controlla se l'ultima regexp trova corrispondenza nella stringa */
+        if (std::regex_search(sRow, result, regPattern))
+        {
+
+          __PRTVAR__("result[0]", result[0])
+          __PRTVAR__("result[1]", result[1])
+          __PRTVAR__("result[2]", result[2])
+
+          /* imposta la configurazione della board */
+          std::string sOpt = result[1];
+
+          /* ciclo di estrazione delle opzioni */
+          std::sregex_iterator opt(sOpt.begin(), sOpt.end(), regOpt);
+          std::sregex_iterator endOpt;
+
+          while (opt != endOpt)
+          {
+            std::smatch match = *opt;
+
+            __PRTVAR__("match[0]", match[0])
+            __PRTVAR__("match[1]", match[1])
+            __PRTVAR__("match[2]", match[2])
+
+            if (match[1] == "file")
+              sFILE = s2S(match[2]);
+
+            if (match[1] == "mode")
+              sMode = match[2];
+
+            if (match[1] == "addh")
+              iADDH = stoi(match[2]);
+
+            if (match[1] == "addl")
+              iADDL = stoi(match[2]);
+
+            if (match[1] == "ch")
+              iCH = stoi(match[2]);
+
+            ++opt;
+          }
+        }
+
+        inpROW.clear();
+        std::cout << std::endl << "Digita il messaggio da inviare : ";
+        std::cin >> inpROW;
+        sMSG = inpROW;
+
+        if (sMode == "fixed")
+        {
+          __PRTDBG__
+          lr.slMsg(iADDH, iADDL, iCH, sMSG);
+        }
+        else if (sMode == "simple")
+        {
+          __PRTDBG__
+          lr.slMsg(sMSG, iCH);
+        }
+        else if (sMode == "struct")
+        {
+          __PRTDBG__
+          lr.slMsg(sMSG, s2S(mVar["username"]), iCH);
+        }
+      }
+
+      //          ╔╗              ╔╗
+      //          ║║             ╔╝╚╗
+      // ╔═╗╔══╗╔═╝║╔╗╔═╗╔══╗╔══╗╚╗╔╝
+      // ║╔╝║╔╗║║╔╗║╠╣║╔╝║╔╗║║╔═╝ ║║
+      // ║║ ║║═╣║╚╝║║║║║ ║║═╣║╚═╗ ║╚╗
+      // ╚╝ ╚══╝╚══╝╚╝╚╝ ╚══╝╚══╝ ╚═╝
+      if (sTag == ">>" || sTag == ">")
+      {
+        __PRTVAR__("tag", sTag + "\\s+(.*?)\\s+--")
+
+        String sMODE;
+
+        std::regex regPattern(sTag + "\\s+(.*?)\\s+--");
+        if (std::regex_search(sRow, result, regPattern))
+        {
+          __PRTVAR__("result[0]", result[0])
+          __PRTVAR__("result[1]", result[1])
+          __PRTVAR__("result[2]", result[2])
+
+          if (sTag == ">>")
+          {
+            sMODE = "a";
           }
           else
           {
-            std::cout << sMessaggio << "\n";
+            sMODE = "w+";
+          }
+        }
+      }
+
+      ++it;
+    }
+  }
+
+  // ╔╗   ╔╗
+  // ║║  ╔╝╚╗
+  // ║╚═╗╚╗╔╝
+  // ║╔╗║ ║║
+  // ║╚╝║ ║╚╗
+  // ╚══╝ ╚═╝
+  else if (sCommand == "bt") /* gestione del comando lora */
+  {
+
+    String sFileIN;
+    String sFileOUT;
+    String sMODE;
+    String sMSG;
+
+#ifndef __BTSERIAL__
+#define __BTSERIAL__
+    static bt btSerial;
+#endif
+
+    std::regex regName("(--name)\\s+(\\S+)");
+    std::regex regSend("(--send)|<<\\s+(\\S+)");
+    std::regex regRead("(--read)|>>\\s+(\\S+)|>\\s+(\\S+)");
+
+    __PRTVAR__("sRow", sRow)
+
+    // Imposta il nome della scheda
+    if (std::regex_search(sRow, result, regName))
+    {
+      string sName;
+      sName = result.str(0);
+      sName = sName.substr(6, sName.length() - 6);
+      btSerial.sBT(shell::s2S(shell::trim(sName)));
+    }
+
+    // Seleziona il tipo di input
+    if (std::regex_search(sRow, result, regSend))
+    {
+      __PRTVAR__("result[0]", result[0])
+      __PRTVAR__("result[1]", result[1])
+
+      if (result[0] == "--send")
+      {
+        __PRTDBG__
+        input inpMSG;
+        inpMSG.clear();
+        std::cout << "Digita il messaggio da inviare : " << std::endl;
+        std::cin >> inpMSG;
+        sMSG = inpMSG;
+        btSerial.sendBT(sMSG);
+      }
+      else
+      {
+        string sName = result[1];
+        sFileIN = shell::s2S(mVar["path"] + sName);
+
+        __PRTVAR__(" sFileIN ", S2s(sFileIN))
+
+        if (SPIFFS.exists(sFileIN))
+        {
+          File pFILE = SPIFFS.open(sFileIN);
+          while (pFILE.available())
+          {
+            btSerial.sendBT(pFILE.readStringUntil('\n'));
           }
         }
       }
     }
-  }
 
-  /*
-   * Accoda i dati letti dal BT su file
-   */
-  sFile = shell::readFlag(">>");
-  __PRTVAR__("sFile", sFile)
-
-  if (sFile.size() > 0)
-  {
-
-    regex file("(([\\w.-_!~]+)$)");
-    regex_search(sFile, result, file);
-    sFile = result.str(0);
-    pFile = SPIFFS.open(s2S(shell::cfgshell.__cur_path__ + sFile), "+a");
-
-    while (BTSerial.available())
+    // Seleziona il tipo di output
+    if (std::regex_search(sRow, result, regRead))
     {
-      pFile.println(BTSerial.readStringUntil('\n'));
+      __PRTVAR__("result[1]", result[1])
+      __PRTVAR__("result[2]", result[2])
+      __PRTVAR__("result[0]", result[0])
+
+      string sTag = result[1];
+      sTag = shell::trim(sTag);
+
+      if (result[0] == "--read")
+      {
+        __PRTDBG__
+        btSerial.rBT();
+      }
+      else if ((result[1]).length() > 0)
+      { /* accoda il buffer della seriale ad un file */
+        __PRTDBG__
+        string sName = result[1];
+        sFileOUT = shell::s2S(mVar["path"] + sName);
+        sMODE = "a+";
+      }
+      else if (result[2].length() > 0)
+      {
+        __PRTDBG__
+        string sName = result[2];
+        sFileOUT = shell::s2S(mVar["path"] + sName);
+        sMODE = "w";
+      }
+
+      if (sFileOUT.length() > 0)
+      {
+        __PRTVAR__("sFileOUT", S2s(sFileOUT))
+        __PRTVAR__("sMODE", S2s(sMODE))
+        btSerial.rBT(sFileOUT, sMODE);
+      }
     }
 
-    pFile.close();
+    __PRTDBG__
+
+    sRow.clear();
   }
 
-  /*
-   * Scrive i dati letti dal BT su file
-   */
-  sFile = shell::readFlag(">");
-  __PRTVAR__("sFile", sFile)
-
-  if (sFile.size() > 0)
-  {
-    regex file("(([\\w.-_!~]+)$)");
-    regex_search(sFile, result, file);
-    sFile = result.str(0);
-    pFile = SPIFFS.open(s2S(shell::cfgshell.__cur_path__ + sFile), "w");
-
-    while (BTSerial.available())
-    {
-      pFile.println(BTSerial.readStringUntil('\n'));
-    }
-
-    pFile.close();
+  // ╔═══╗╔═╗╔═╗╔══╗╔════╗
+  // ║╔══╝╚╗╚╝╔╝╚╣╠╝║╔╗╔╗║
+  // ║╚══╗ ╚╗╔╝  ║║ ╚╝║║╚╝
+  // ║╔══╝ ╔╝╚╗  ║║   ║║
+  // ║╚══╗╔╝╔╗╚╗╔╣╠╗ ╔╝╚╗
+  // ╚═══╝╚═╝╚═╝╚══╝ ╚══╝
+  else if (sCommand == "exit")
+  { // esecuzione del comando ( comando interno )
+    myBoard.bShell = false;
   }
-}
+
+} // end exec

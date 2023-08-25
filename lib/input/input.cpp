@@ -28,6 +28,7 @@ input::input()
   __row__ = "...digita help...";
   __ROW__ = "...digita help...";
   __HideEcho__ = false;
+
   MaxSerRx = 128;
 
 } // costruttore di default
@@ -65,17 +66,23 @@ input::input()
 */
 void input::read_Rx()
 {
-  unsigned long SessStart = millis();
+  unsigned long SessStart = millis(); // durata del timeout
+  char endMarker1 = '\r';             // Some terminal client apps send a CR
+  char endMarker2 = '\n';             // Others just a LF character, therefore we need to check for both
+  char rc;                            // carattere digitato
   const byte numChars = MaxSerRx;
-  char receivedChars[numChars]; // an array to store the received data
   boolean newData = false;
-  static byte ndx = 0;
-  char endMarker1 = '\r'; // Some terminal client apps send a CR
-  char endMarker2 =
-      '\n'; // Others just a LF character, therefore we need to check for both
-  char rc;
+  static byte ndx = 0;          // inizializza l'indice dell'array dei caratteri digitati utilizzato nella funzione read_RX
+  char receivedChars[numChars]; // an array to store the received data
 
   // Serial.println(numChars);
+
+  if (__row__.length() > 0)
+  {
+    ndx = __row__.length();
+    for (int iAux = 0; iAux <= ndx; iAux++)
+      receivedChars[iAux] = __row__[iAux];
+  }
 
   while (newData == false)
   { // blocco di lettura
@@ -136,19 +143,18 @@ void input::read_Rx()
 
       //
 
-
     } // fine del blocco di acquisizione dei caratteri
   }   // fine del blocco di lettura
 
 ReturnReceivedString:
 
   // copia l'array di input nell'oggetto STRING
+  __ROW__.clear();
   for (int iAux = 0; receivedChars[iAux] != '\0'; iAux++)
-  {
     __ROW__ += receivedChars[iAux];
-  }
 
   // coversione dell'oggetto String in string
+  __row__.clear();
   __row__ = input::STR2str(__ROW__);
 
 } // fine della funzione Ser_Rx()
@@ -244,28 +250,16 @@ void input::trim()
   this->ltrim();
 }
 
-/* estrae la path dal comando */
-string input::regS(string sReg)
-{
-  // int iIndex = 0;
-  std::smatch result;
-  string sReturn = "";
+/* converte la stringa in un intero */
+int input::stoi() const {
 
-  std::regex r(sReg);
-
-  if (regex_search(this->__row__, result, r))
+  try
   {
-    for (int i = 0; i < result.size(); i++)
-    {
-      cout << "\n"
-           << result[i];
-      cout << flush;
-    }
-    cout << "\n"
-         << flush;
-    sReturn = result[0];
-  };
-
-  return sReturn;
-
-} // end path()
+    int convertedValue = std::stoi(__row__);
+    return convertedValue;
+  }
+  catch (const std::exception &e)
+  {
+    return 0;
+  }
+}

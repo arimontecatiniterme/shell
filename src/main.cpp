@@ -79,16 +79,19 @@
  * Importazione delle librerie specifiche per ESP 32
  */
 #include <Arduino.h> // Libreria standard di Arduino
-#include <FS.h>     // Libreria per le funzionalita del file system
-#include <SPIFFS.h> /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
-#include <WiFi.h>   /* libreria per la gestione del modulo wifi */
+#include <FS.h>      // Libreria per le funzionalita del file system
+#include <SPIFFS.h>  /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
+#include <SoftwareSerial.h>
+#include <WiFi.h> /* libreria per la gestione del modulo wifi */
 
 /*
  * librerie specifiche del progetto path ./lib/.....
  */
 #include "input.h" /* simula l'input da riga di comando sulla porta seriale */
 #include "shell.h" /* mette a disposizione una shell utilizzabile con la seriale oppure in modo trasparente */
-
+                   /* mette a disposizione oggetti di tipo LoRa e BT */
+// #include "LoRa.h"
+// #include "bt.h"
 
 /* Associazione dei PIN della ESP32 alla board LoRa
  * G21    -->     M0
@@ -106,25 +109,27 @@
 #define TX GPIO_NUM_16
 #define RX GPIO_NUM_17
 
+using namespace std;
+
 /* Definisce la struttura di una nuova varibile di tipo board */
-struct
+struct machine
 {
   string __name__;    // nome dispositivo
   string __cgffile__; // file di configurazione
   string __sCmd__;    // ultimo comando eseguito di tipo string
   string __row__;     // ultima riga inserita in formato string
-  input __inpCmd__;   // ultimo riga inserita in formato input
   int __timeout__;    // valore di timeout
   boolean bshMode;    // indica che la borda e' in modalita' shell
-} typedef machine;
+};
 
 /* Nuova variabile di tipo board */
-machine myBoard;
+struct machine myBoard;
 
 /* oggetto di tipo shell */
 shell sh;
 
-/* definisce una seriale virtuale per comunicare con LoRa */
+/* oggetto di tipo lora */
+// LoRa lr;
 
 /* funzione senza scopo da utilizzare per impegnare il tempo */
 void makesAnything()
@@ -181,14 +186,6 @@ void setup()
   // pinMode(M1, OUTPUT);
   // pinMode(AUX, OUTPUT);
 
-  /* costruisce l'array dei PIN */
-  sh.pinSet("BUTTON", BUTTON, INPUT);
-  sh.pinSet("M0", M0, OUTPUT);
-  sh.pinSet("M1", M1, OUTPUT);
-  sh.pinSet("AUX", AUX, OUTPUT);
-  sh.pinSet("TX", TX, OUTPUT);
-  sh.pinSet("RX", RX, OUTPUT);
-
   /* inizializza il filesystem */
   Serial.print(F("Inizializing FS..."));
   if (SPIFFS.begin(true))
@@ -207,6 +204,7 @@ void setup()
   myBoard.__sCmd__ = "";
   myBoard.bshMode = true;
 
+  // lr.init();
 }
 
 void loop()
@@ -220,9 +218,15 @@ void loop()
   // myBoard.bshMode = sh.start("lora --rconf 0");
   // Serial.println("####");
 
-  myBoard.bshMode = sh.start("");
+  // lr.rlConf();
 
   delay(2000);
+
+  // lr.slConf("/lora.ini");
+
+
+
+  sh.start();
 
   Serial.println("...");
 }

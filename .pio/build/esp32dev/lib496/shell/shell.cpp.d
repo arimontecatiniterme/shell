@@ -141,6 +141,7 @@
  .pio/libdeps/esp32dev/EspSoftwareSerial/src/SoftwareSerial.h \
  .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/circular_queue.h \
  .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/Delegate.h \
+ lib/LoRa/LoRa.h \
  .pio/libdeps/esp32dev/EByte\ LoRa\ E220\ library/LoRa_E220.h \
  .pio/libdeps/esp32dev/EByte\ LoRa\ E220\ library/includes/statesNaming.h \
- lib/input/input.h
+ lib/bt/bt.h lib/edlin/edlin.h lib/input/input.h

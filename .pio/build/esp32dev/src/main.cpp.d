@@ -129,6 +129,9 @@
  /home/andrea/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_hw_support/include/soc/esp32/spiram.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/FS/src/FS.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/SPIFFS/src/SPIFFS.h \
+ .pio/libdeps/esp32dev/EspSoftwareSerial/src/SoftwareSerial.h \
+ .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/circular_queue.h \
+ .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/Delegate.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFi.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/cores/esp32/Print.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/cores/esp32/IPv6Address.h \
@@ -196,8 +199,7 @@
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/BluetoothSerial/src/BTScan.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/BluetoothSerial/src/BTAddress.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/BluetoothSerial/src/BTAdvertisedDevice.h \
- .pio/libdeps/esp32dev/EspSoftwareSerial/src/SoftwareSerial.h \
- .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/circular_queue.h \
- .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/Delegate.h \
+ lib/LoRa/LoRa.h \
  .pio/libdeps/esp32dev/EByte\ LoRa\ E220\ library/LoRa_E220.h \
- .pio/libdeps/esp32dev/EByte\ LoRa\ E220\ library/includes/statesNaming.h
+ .pio/libdeps/esp32dev/EByte\ LoRa\ E220\ library/includes/statesNaming.h \
+ lib/bt/bt.h lib/edlin/edlin.h
