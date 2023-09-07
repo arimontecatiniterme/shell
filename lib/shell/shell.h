@@ -103,17 +103,18 @@ private:
   std::vector<struct strPosix> vPattern;
 
   // FUNZIONI DI UTILITA' DELLA CLASSE SHELL
-  void s2IP(string, int[]);                                                          // converte una stringa in un indirizzo IP
-  string trim(const std::string &);                                                  // elimina gli spazi iniziali e finali
-  string rsearch(string, string);                                                    // esegue la ricerca con regexp
-  String s2S(string);                                                                // converte da string a String
-  string S2s(String);                                                                // converte da String a string
-  int dbg();                                                                         // attiva disattiva il debug
+  void s2IP(string, int[]);                                                                 // converte una stringa in un indirizzo IP
+  string trim(const std::string &);                                                         // elimina gli spazi iniziali e finali
+  string rsearch(string, string);                                                           // esegue la ricerca con regexp
+  String s2S(string);                                                                       // converte da string a String
+  string S2s(String);                                                                       // converte da String a string
+  int dbg();                                                                                // attiva disattiva il debug
   static boolean sortFlag(const strPosix &a, const strPosix &b) { return a.iPos < b.iPos; } // ordina la posizione dei flag
 
   // Comandi shell interni
-  void lora(string); // gestisce una scheda lora collegata alla board ESP32
-  void bts(string);  // gestisce la comunicazione bluetoothSerial
+  void lora(string);   // gestisce una scheda lora collegata alla board ESP32
+  void txlora(String); // invia il messaggio mediante lora
+  void bts(string);    // gestisce la comunicazione bluetoothSerial
 
   // FUNZIONI DI UTILITA' DELLA SHELL
   void exec(string, string); // esegue un comando di shell

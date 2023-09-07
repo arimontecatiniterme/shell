@@ -761,7 +761,7 @@ void shell::start(string sRow)
       {
         __PRTDBG__
 
-        sFileOUT = "." + std::to_string(iStep) + ".tmp";
+        sFileOUT = std::to_string(iStep) + ".tmp";
         sTemp = sTemp + " > " + sFileOUT;
       }
       else
@@ -770,7 +770,7 @@ void shell::start(string sRow)
 
         sFileIN = sFileOUT;
         sTemp = sTemp + " << " + sFileIN;
-        sFileOUT = "." + std::to_string(iStep) + ".tmp";
+        sFileOUT = std::to_string(iStep) + ".tmp";
         sTemp = sTemp + " > " + sFileOUT;
       }
     }
@@ -1218,8 +1218,16 @@ void shell::exec(string sCommand, string sRow)
     lr.init();
 #endif
 
-    std::string sTag;
-    std::string sValue;
+    std::string sFlag;
+    std::string sOpt;
+    std::string sVar, sValue;
+
+    boolean bManualInput = true;
+
+    String sFILE, sMSG;
+    File pFILE;
+
+    input inpmsg;
 
     /*
      * --rconf : legge la configurazione della scheda
@@ -1227,229 +1235,154 @@ void shell::exec(string sCommand, string sRow)
      * --send  : invia un messaggio da console
      * --lconf : carica una configurazione da file
      */
+    std::regex regFlag("(--(rconf|set|send|read)\\s+(.*?))");
+    // std::regex regOpt("(addh|addl|ch|uartbr|uartp|airdr|packetftx|rnoise|tpow|re|ftx|lbt|wor|save)(=)(\\s+(\\S+))");
 
-    std::regex reg("(--rconf|--set|--send|>>|>)");
-    std::regex regSend("(addh|addl|ch|file)(=)(\\s+(\\S+))");
-
-    /* In questa versione dell'espressione regolare (\w+)=(\w+(\.\w+)?),
-       la parte (\w+(\.\w+)?) cattura il valore. La parte \w+ cattura una
-       sequenza di caratteri alfanumerici, e (\.\w+)? indica che può esserci
-       una parte opzionale con un punto seguito da una sequenza di caratteri
-       alfanumerici. In questo modo, i valori che contengono il carattere punto
-       saranno catturati correttamente.
-       */
+    /*
+      In questa versione dell'espressione regolare (\w+)=(\w+(\.\w+)?),
+      la parte (\w+(\.\w+)?) cattura il valore. La parte \w+ cattura una
+      sequenza di caratteri alfanumerici, e (\.\w+)? indica che può esserci
+      una parte opzionale con un punto seguito da una sequenza di caratteri
+      alfanumerici. In questo modo, i valori che contengono il carattere punto
+      saranno catturati correttamente.
+    */
     std::regex regOpt("(\\w+)=(\\w+(\\.\\w+)?)");
 
-    std::sregex_iterator it(sRow.begin(), sRow.end(), reg);
-    std::sregex_iterator end;
+    /*
+       In questa versione dell 'espressione regolare, (\\>{1,2}) cattura
+       l' operatore di ridirezione singola(>) o doppia(>>) e(\\w +\\.\\w +)
+       cattura il nome del file.La parte \\> {1, 2} corrisponde a uno o due
+       caratteri di maggiore >.
+    */
+    std::regex regFlin("(<<)\\s*(\\w+\\.\\w+)");
+    std::regex regFlout("(\\>{1,2})\\s*(\\w+\\.\\w+)");
 
-    /* rimuove tutti i - finali */
-    while (!sRow.empty() && sRow.back() == '-')
-      sRow.pop_back();
-
-    sRow = sRow + " --";
-
+    // sRow = sRow + " --";
     __PRTVAR__("sRow", sRow)
 
-    while (it != end)
+    /* pulisce la variabile file */
+    sFILE.clear();
+
+    if (std::regex_search(sRow, result, regFlag))
     {
-      std::smatch match = *it;
-      sTag = match[0];
 
-      __PRTVAR__("sTag", sTag)
-      __PRTVAR__("match[0]", match[0])
-      __PRTVAR__("match[1]", match[1])
-      __PRTVAR__("match[2]", match[2])
+      __PRTVAR__("result[0]", result[0])
+      __PRTVAR__("result[1]", result[1])
+      __PRTVAR__("result[2]", result[2])
 
-      //                 ╔═╗
-      //                 ║╔╝
-      // ╔═╗╔══╗╔══╗╔══╗╔╝╚╗
-      // ║╔╝║╔═╝║╔╗║║╔╗╗╚╗╔╝
-      // ║║ ║╚═╗║╚╝║║║║║ ║║
-      // ╚╝ ╚══╝╚══╝╚╝╚╝ ╚╝
+      /* aggiorna la variabile */
+      sFlag = result[2];
+
+      /* Imposta la configurazione della board LoRa*/
+      if (sFlag == "set")
+      {
+        __PRTDBG__
+
+        /* ciclo di estrazione delle opzioni del comando */
+        std::sregex_iterator itOpt(sRow.begin(), sRow.end(), regOpt);
+        std::sregex_iterator endOpt;
+
+        while (itOpt != endOpt)
+        {
+          std::smatch matchOpt = *itOpt;
+
+          __PRTVAR__("matchOpt[0]", matchOpt[0])
+          __PRTVAR__("matchOpt[1]", matchOpt[1])
+          __PRTVAR__("matchOpt[2]", matchOpt[2])
+
+          /* impostazione della configurazione */
+          sVar = matchOpt[1];
+          sValue = matchOpt[2];
+          shell::set("set " + sVar + "=" + sValue);
+          lr.slConf(sValue, sVar);
+
+          ++itOpt;
+        }
+      }
+      /* end set board config */
+
       /* legge la configurazione della board */
-      if (sTag == "--rconf")
+      if (sFlag == "rconf")
       {
         __PRTDBG__
         std::cout << std::endl;
         lr.rlConf();
       }
+      /* end read board config */
 
-      //          ╔╗
-      //         ╔╝╚╗
-      // ╔══╗╔══╗╚╗╔╝
-      // ║══╣║╔╗║ ║║
-      // ╠══║║║═╣ ║╚╗
-      // ╚══╝╚══╝ ╚═╝
-      /* Imposta la configurazione della board */
-      if (sTag == "--set")
+      /* legge il buffer della board */
+      if (sFlag == "read")
       {
-        __PRTVAR__("tag", sTag + "\\s+(.*?)\\s+--")
-        std::regex regPattern(sTag + "\\s+(.*?)\\s+--");
-
-        /* controlla se l'ultima regexp trova corrispondenza nella stringa */
-        if (std::regex_search(sRow, result, regPattern))
-        {
-
-          __PRTVAR__("result[0]", result[0])
-          __PRTVAR__("result[1]", result[1])
-          __PRTVAR__("result[2]", result[2])
-
-          /* imposta la configurazione della board */
-          std::string sOpt = result[1];
-
-          /* ciclo di estrazione delle opzioni */
-          std::sregex_iterator opt(sOpt.begin(), sOpt.end(), regOpt);
-          std::sregex_iterator endOpt;
-
-          while (opt != endOpt)
-          {
-            std::smatch match = *opt;
-
-            __PRTVAR__("match[0]", match[0])
-            __PRTVAR__("match[1]", match[1])
-            __PRTVAR__("match[2]", match[2])
-
-            /* imposta la configurazione da file */
-            if (match[1] == "file")
-            {
-              std::string sFile = (std::string)match[2];
-              sFile = mVar["path"] + sFile;
-
-              __PRTVAR__("sFile", sFile)
-
-              lr.slConf(s2S(sFile));
-            }
-            else
-            /* oppure da riga di comando */
-            {
-              lr.slConf(match[2], match[1]);
-            }
-            ++opt;
-          }
-        }
+        __PRTDBG__
+        std::cout << std::endl;
+        lr.rlConf();
       }
-
-      //               ╔╗
-      //               ║║
-      // ╔══╗╔══╗╔══╗╔═╝║
-      // ║══╣║╔╗║║╔╗║║╔╗║
-      // ╠══║║║═╣║║║║║╚╝║
-      // ╚══╝╚══╝╚╝╚╝╚══╝
-      // invia un messaggio da riga di comando
-      if (sTag == "--send")
-      {
-        String sMSG;
-
-        std::string username;
-
-        int iCH = 23;
-        int iADDL = 0;
-        int iADDH = 1;
-        String sFILE, sUSERNAME;
-        string sMode;
-
-        input inpROW;
-
-        __PRTVAR__("tag", sTag + "\\s+(.*?)\\s+--")
-        std::regex regPattern(sTag + "\\s+(.*?)\\s+--");
-
-        /* controlla se l'ultima regexp trova corrispondenza nella stringa */
-        if (std::regex_search(sRow, result, regPattern))
-        {
-
-          __PRTVAR__("result[0]", result[0])
-          __PRTVAR__("result[1]", result[1])
-          __PRTVAR__("result[2]", result[2])
-
-          /* imposta la configurazione della board */
-          std::string sOpt = result[1];
-
-          /* ciclo di estrazione delle opzioni */
-          std::sregex_iterator opt(sOpt.begin(), sOpt.end(), regOpt);
-          std::sregex_iterator endOpt;
-
-          while (opt != endOpt)
-          {
-            std::smatch match = *opt;
-
-            __PRTVAR__("match[0]", match[0])
-            __PRTVAR__("match[1]", match[1])
-            __PRTVAR__("match[2]", match[2])
-
-            if (match[1] == "file")
-              sFILE = s2S(match[2]);
-
-            if (match[1] == "mode")
-              sMode = match[2];
-
-            if (match[1] == "addh")
-              iADDH = stoi(match[2]);
-
-            if (match[1] == "addl")
-              iADDL = stoi(match[2]);
-
-            if (match[1] == "ch")
-              iCH = stoi(match[2]);
-
-            ++opt;
-          }
-        }
-
-        inpROW.clear();
-        std::cout << std::endl << "Digita il messaggio da inviare : ";
-        std::cin >> inpROW;
-        sMSG = inpROW;
-
-        if (sMode == "fixed")
-        {
-          __PRTDBG__
-          lr.slMsg(iADDH, iADDL, iCH, sMSG);
-        }
-        else if (sMode == "simple")
-        {
-          __PRTDBG__
-          lr.slMsg(sMSG, iCH);
-        }
-        else if (sMode == "struct")
-        {
-          __PRTDBG__
-          lr.slMsg(sMSG, s2S(mVar["username"]), iCH);
-        }
-      }
-
-      //          ╔╗              ╔╗
-      //          ║║             ╔╝╚╗
-      // ╔═╗╔══╗╔═╝║╔╗╔═╗╔══╗╔══╗╚╗╔╝
-      // ║╔╝║╔╗║║╔╗║╠╣║╔╝║╔╗║║╔═╝ ║║
-      // ║║ ║║═╣║╚╝║║║║║ ║║═╣║╚═╗ ║╚╗
-      // ╚╝ ╚══╝╚══╝╚╝╚╝ ╚══╝╚══╝ ╚═╝
-      if (sTag == ">>" || sTag == ">")
-      {
-        __PRTVAR__("tag", sTag + "\\s+(.*?)\\s+--")
-
-        String sMODE;
-
-        std::regex regPattern(sTag + "\\s+(.*?)\\s+--");
-        if (std::regex_search(sRow, result, regPattern))
-        {
-          __PRTVAR__("result[0]", result[0])
-          __PRTVAR__("result[1]", result[1])
-          __PRTVAR__("result[2]", result[2])
-
-          if (sTag == ">>")
-          {
-            sMODE = "a";
-          }
-          else
-          {
-            sMODE = "w+";
-          }
-        }
-      }
-
-      ++it;
+      /* end read board buffer */
     }
+    else if (std::regex_search(sRow, result, regFlout))
+    {
+      __PRTVAR__("result[0]", result[0])
+      __PRTVAR__("result[1]", result[1])
+      __PRTVAR__("result[2]", result[2])
+    }
+    else if (std::regex_search(sRow, result, regFlin))
+    {
+      __PRTVAR__("result[0]", result[0])
+      __PRTVAR__("result[1]", result[1])
+      __PRTVAR__("result[2]", result[2])
+
+      sFILE = s2S(mVar["path"]);
+      sFILE = sFILE + s2S(result[2]);
+      bManualInput = false;
+
+      if (SPIFFS.exists(sFILE))
+      {
+        pFILE=SPIFFS.open(sFILE);
+      }
+    }
+
+    if (bManualInput)
+    {
+      /* digita il messaggio */
+      inpmsg.clear();
+      std::cout << std::endl
+                << "Digita il messaggio da inviare : ";
+      std::cin >> inpmsg;
+      sMSG = inpmsg;
+    }
+
+    /* inizia la trasmissione */
+    do
+    {
+      __PRTDBG__
+
+      if (pFILE.available())
+      {
+        sMSG = pFILE.readStringUntil('\n');
+        __PRTVAR__("sMSG", S2s(sMSG))
+      }
+
+      if (mVar["mode"] == "fixed")
+      {
+        __PRTDBG__
+        lr.slMsg(stoi(mVar["addh"]), stoi(mVar["addl"]), stoi(mVar["ch"]), sMSG);
+      }
+      else if (mVar["mode"] == "simple")
+      {
+        __PRTDBG__
+        lr.slMsg(sMSG, stoi(mVar["ch"]));
+      }
+      else if (mVar["mode"] == "struct")
+      {
+        __PRTDBG__
+        lr.slMsg(sMSG, s2S(mVar["username"]), stoi(mVar["ch"]));
+      }
+
+    } while (pFILE.available());
+
+    /* ------------------------------------------------ */
+
+    sRow.clear();
   }
 
   // ╔╗   ╔╗
@@ -1471,91 +1404,79 @@ void shell::exec(string sCommand, string sRow)
     static bt btSerial;
 #endif
 
-    std::regex regName("(--name)\\s+(\\S+)");
-    std::regex regSend("(--send)|<<\\s+(\\S+)");
-    std::regex regRead("(--read)|>>\\s+(\\S+)|>\\s+(\\S+)");
+    std::regex regFlag("--(name|send|read)\\s+(\\S+)");
+
+    /*
+       In questa versione dell 'espressione regolare, (\\>{1,2}) cattura
+       l' operatore di ridirezione singola(>) o doppia(>>) e(\\w +\\.\\w +)
+       cattura il nome del file.La parte \\> {1, 2} corrisponde a uno o due
+       caratteri di maggiore >.
+    */
+    std::regex regRead("(\\<{1,2})\\s*(\\w+\\.\\w+)");
+    std::regex regWrite("(\\>{1,2})\\s*(\\w+\\.\\w+)");
 
     __PRTVAR__("sRow", sRow)
 
-    // Imposta il nome della scheda
-    if (std::regex_search(sRow, result, regName))
-    {
-      string sName;
-      sName = result.str(0);
-      sName = sName.substr(6, sName.length() - 6);
-      btSerial.sBT(shell::s2S(shell::trim(sName)));
-    }
-
-    // Seleziona il tipo di input
-    if (std::regex_search(sRow, result, regSend))
+    /* Estrae il flag e il suo valore */
+    if (std::regex_search(sRow, result, regFlag))
     {
       __PRTVAR__("result[0]", result[0])
-      __PRTVAR__("result[1]", result[1])
-
-      if (result[0] == "--send")
-      {
-        __PRTDBG__
-        input inpMSG;
-        inpMSG.clear();
-        std::cout << "Digita il messaggio da inviare : " << std::endl;
-        std::cin >> inpMSG;
-        sMSG = inpMSG;
-        btSerial.sendBT(sMSG);
-      }
-      else
-      {
-        string sName = result[1];
-        sFileIN = shell::s2S(mVar["path"] + sName);
-
-        __PRTVAR__(" sFileIN ", S2s(sFileIN))
-
-        if (SPIFFS.exists(sFileIN))
-        {
-          File pFILE = SPIFFS.open(sFileIN);
-          while (pFILE.available())
-          {
-            btSerial.sendBT(pFILE.readStringUntil('\n'));
-          }
-        }
-      }
-    }
-
-    // Seleziona il tipo di output
-    if (std::regex_search(sRow, result, regRead))
-    {
       __PRTVAR__("result[1]", result[1])
       __PRTVAR__("result[2]", result[2])
-      __PRTVAR__("result[0]", result[0])
 
-      string sTag = result[1];
-      sTag = shell::trim(sTag);
+      if (result[1] == "name")
+      {
+        String sNAME = s2S(result[2]);
+        btSerial.sBT(sNAME);
+      }
 
-      if (result[0] == "--read")
+      if (result[1] == "send")
+      {
+        __PRTDBG__
+
+        /* digita il messaggio */
+        input inpmsg;
+        inpmsg.clear();
+        std::cout << std::endl
+                  << "Digita il messaggio da inviare : ";
+        std::cin >> inpmsg;
+        sMSG = inpmsg;
+
+        btSerial.sBT(sMSG);
+      }
+
+      /* legge il buffer del BT */
+      if (result[1] == "read")
       {
         __PRTDBG__
         btSerial.rBT();
       }
-      else if ((result[1]).length() > 0)
-      { /* accoda il buffer della seriale ad un file */
-        __PRTDBG__
-        string sName = result[1];
-        sFileOUT = shell::s2S(mVar["path"] + sName);
-        sMODE = "a+";
-      }
-      else if (result[2].length() > 0)
+    }
+    else if (std::regex_search(sRow, result, regRead))
+    {
+      __PRTVAR__("result[0]", result[0])
+      __PRTVAR__("result[1]", result[1])
+      __PRTVAR__("result[2]", result[2])
+    }
+    else if (std::regex_search(sRow, result, regWrite))
+    {
+      __PRTVAR__("result[0]", result[0])
+      __PRTVAR__("result[1]", result[1])
+      __PRTVAR__("result[2]", result[2])
+
+      sFileOUT = s2S(result[2]);
+      sFileOUT = s2S(mVar["path"].c_str()) + sFileOUT;
+
+      if (result[1] == ">")
       {
-        __PRTDBG__
-        string sName = result[2];
-        sFileOUT = shell::s2S(mVar["path"] + sName);
         sMODE = "w";
       }
-
-      if (sFileOUT.length() > 0)
+      else
       {
-        __PRTVAR__("sFileOUT", S2s(sFileOUT))
-        __PRTVAR__("sMODE", S2s(sMODE))
-        btSerial.rBT(sFileOUT, sMODE);
+        sMODE = "a+";
       }
+
+      btSerial.rBT(sFileOUT, sMODE);
     }
 
     __PRTDBG__

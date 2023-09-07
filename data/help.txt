@@ -69,7 +69,6 @@ grep --reg ( )*[\w]+( )*(=)( )*[\w]+ << lora.ini > out.txt
 lora - gestisce la configurazione / trasmissione di una scheda lora
        --rconf [board] - legge la configurazione di una board LoRa 
        --set - scrive la configurazione sulla board LoRa [var=valore]
-              file      : nome del file da trasmettere
               addl      : parte alta dell' indirizzo
               addh      : parte passa dell'indirizzo
               ch        : canale di trasmissione
@@ -91,7 +90,7 @@ lora - gestisce la configurazione / trasmissione di una scheda lora
               ch        : canale di trasmissione
               mode      : [fixed|simple|struc]
 
-       << - carica da file la configurazione, la sintassi dei flag all' interno del file di input e' [var=var]
+       << - carica il file txt da inviare
        [>>|>] :: output su file 
 
 
