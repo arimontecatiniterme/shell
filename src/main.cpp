@@ -78,11 +78,10 @@
 /*
  * Importazione delle librerie specifiche per ESP 32
  */
-#include <Arduino.h> // Libreria standard di Arduino
-#include <FS.h>      // Libreria per le funzionalita del file system
-#include <SPIFFS.h>  /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
-#include <SoftwareSerial.h>
-#include <WiFi.h> /* libreria per la gestione del modulo wifi */
+#include <Arduino.h>           /* Libreria standard di Arduino */
+#include <ESPAsyncWebServer.h> /* webserve asincrono */
+#include <FS.h>                /* Libreria per le funzionalita del file system */
+#include <SPIFFS.h>            /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
 
 /*
  * librerie specifiche del progetto path ./lib/.....
@@ -90,46 +89,19 @@
 #include "input.h" /* simula l'input da riga di comando sulla porta seriale */
 #include "shell.h" /* mette a disposizione una shell utilizzabile con la seriale oppure in modo trasparente */
                    /* mette a disposizione oggetti di tipo LoRa e BT */
-// #include "LoRa.h"
-// #include "bt.h"
+#include "iw.h"    /* include le funzioni di utility del wifi */
+#include "webs.h"  /* include le funzionalita' per la gestione del web-server */
 
-/* Associazione dei PIN della ESP32 alla board LoRa
- * G21    -->     M0
- * G19    -->     M1
- * V5     -->     VCC
- * GND    -->     GND
- * G18    -->     AUX
- * G16    -->     TX
- * G17    -->     RX
- */
 #define BUTTON GPIO_NUM_12 // pin per il button che permette l'accesso alla shell
-#define M0 GPIO_NUM_21
-#define M1 GPIO_NUM_19
-#define AUX GPIO_NUM_18
-#define TX GPIO_NUM_16
-#define RX GPIO_NUM_17
 
 using namespace std;
 
-/* Definisce la struttura di una nuova varibile di tipo board */
-struct machine
-{
-  string __name__;    // nome dispositivo
-  string __cgffile__; // file di configurazione
-  string __sCmd__;    // ultimo comando eseguito di tipo string
-  string __row__;     // ultima riga inserita in formato string
-  int __timeout__;    // valore di timeout
-  boolean bshMode;    // indica che la borda e' in modalita' shell
-};
+/* imposta e variabili locali */
+const int iPort = 80; /* porta di ascolto del web server */
 
-/* Nuova variabile di tipo board */
-struct machine myBoard;
-
-/* oggetto di tipo shell */
-shell sh;
-
-/* oggetto di tipo lora */
-// LoRa lr;
+/* dichiara gli oggetti */
+shell sh;        /* oggetti di tipo shell */
+webs wbs(iPort); /* imposta il web server */
 
 /* funzione senza scopo da utilizzare per impegnare il tempo */
 void makesAnything()
@@ -180,53 +152,34 @@ void setup()
   Serial.begin(9600);
   Serial.println("Serial is ready to accept input");
 
-  /* imposta il modo dei PIN */
-  // pinMode(BUTTON, INPUT);
-  // pinMode(M0, OUTPUT);
-  // pinMode(M1, OUTPUT);
-  // pinMode(AUX, OUTPUT);
-
   /* inizializza il filesystem */
   Serial.print(F("Inizializing FS..."));
   if (SPIFFS.begin(true))
   {
     Serial.println(F("done."));
+    // sh.start("iw --connect passwd=saksdfiower45grtwr8@[]] ssid=anonimasarda");
+    delay(3000);
+    sh.start("iw --connect passwd=settembre63 ssid=bakunin");
+    sh.start("iw --status");
+    sh.start("ls");
+    wbs.onFile("/", "/index.html", HTTP_GET);
+    wbs.onFile("/shell.html", "/shell.html", HTTP_GET);
+    wbs.onLS("/ls.html", HTTP_GET);
+    wbs.onFile("/shell.txt", "/shell.txt", HTTP_GET);
+    
+    wbs.onMedia("/shell.txt", "/shell.txt", "text/plain", HTTP_GET);
+    wbs.onMedia("/worg.css", "/worg.css", "text/plain", HTTP_GET);
+
+    wbs.begin();
   }
   else
   {
     Serial.println(F("fail."));
   }
-
-  /* impostazione della configurazione generale della scheda */
-  myBoard.__timeout__ = 30000;        // 30 sec di timeout
-  myBoard.__name__ = "WEMOS D1 R32";  // nome macchina
-  myBoard.__cgffile__ = "config.ini"; // file di configurazione del sw
-  myBoard.__sCmd__ = "";
-  myBoard.bshMode = true;
-
-  // lr.init();
 }
 
 void loop()
 {
 
-  // alla pressione del tasto BUTTON
-  // myBoard.bshMode = sh.start("ls -d");
-  // Serial.println("####");
-  // myBoard.bshMode = sh.start("ls -d|cat");
-  // Serial.println("####");
-  // myBoard.bshMode = sh.start("lora --rconf 0");
-  // Serial.println("####");
-
-  // lr.rlConf();
-
-  delay(2000);
-
-  // lr.slConf("/lora.ini");
-
-
-
   sh.start();
-
-  Serial.println("...");
 }

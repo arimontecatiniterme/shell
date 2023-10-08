@@ -127,11 +127,9 @@
  /home/andrea/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/spi_flash/include/esp_spi_flash.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/spi_flash/include/esp_spi_flash_counters.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_hw_support/include/soc/esp32/spiram.h \
+ .pio/libdeps/esp32dev/ESPAsyncWebServer-esphome/src/ESPAsyncWebServer.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/FS/src/FS.h \
- /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/SPIFFS/src/SPIFFS.h \
- .pio/libdeps/esp32dev/EspSoftwareSerial/src/SoftwareSerial.h \
- .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/circular_queue.h \
- .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/Delegate.h \
+ .pio/libdeps/esp32dev/ESPAsyncWebServer-esphome/src/StringArray.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFi.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/cores/esp32/Print.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/cores/esp32/IPv6Address.h \
@@ -191,6 +189,15 @@
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFiUdp.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/cores/esp32/Udp.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/cores/esp32/cbuf.h \
+ .pio/libdeps/esp32dev/AsyncTCP-esphome/src/AsyncTCP.h \
+ /home/andrea/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/lwip/lwip/src/include/lwip/pbuf.h \
+ /home/andrea/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/lwip/lwip/src/include/lwip/err.h \
+ .pio/libdeps/esp32dev/ESPAsyncWebServer-esphome/src/WebResponseImpl.h \
+ .pio/libdeps/esp32dev/ESPAsyncWebServer-esphome/src/WebHandlerImpl.h \
+ .pio/libdeps/esp32dev/ESPAsyncWebServer-esphome/src/AsyncWebSocket.h \
+ .pio/libdeps/esp32dev/ESPAsyncWebServer-esphome/src/AsyncWebSynchronization.h \
+ .pio/libdeps/esp32dev/ESPAsyncWebServer-esphome/src/AsyncEventSource.h \
+ /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/SPIFFS/src/SPIFFS.h \
  lib/input/input.h lib/shell/shell.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/BluetoothSerial/src/BluetoothSerial.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/bt/host/bluedroid/api/include/api/esp_gap_bt_api.h \
@@ -199,7 +206,10 @@
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/BluetoothSerial/src/BTScan.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/BluetoothSerial/src/BTAddress.h \
  /home/andrea/.platformio/packages/framework-arduinoespressif32/libraries/BluetoothSerial/src/BTAdvertisedDevice.h \
+ .pio/libdeps/esp32dev/EspSoftwareSerial/src/SoftwareSerial.h \
+ .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/circular_queue.h \
+ .pio/libdeps/esp32dev/EspSoftwareSerial/src/circular_queue/Delegate.h \
  lib/LoRa/LoRa.h \
  .pio/libdeps/esp32dev/EByte\ LoRa\ E220\ library/LoRa_E220.h \
  .pio/libdeps/esp32dev/EByte\ LoRa\ E220\ library/includes/statesNaming.h \
- lib/bt/bt.h lib/edlin/edlin.h
+ lib/bt/bt.h lib/edlin/edlin.h lib/iw/iw.h lib/webs/webs.h

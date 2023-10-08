@@ -13,7 +13,7 @@ bt::bt(String sNAME)
 }
 
 /* stampa a video il contenuto del buffer del BT */
-void bt::rBT()
+void bt::readBT()
 {
     String sMSG;
 
@@ -27,7 +27,7 @@ void bt::rBT()
 }
 
 /* stampa su file il contenuto del buffer del BT */
-void bt::rBT(String sFILE, String sMODE)
+void bt::readBT(String sFILE, String sMODE)
 {
 
     File pFILE;
@@ -103,7 +103,7 @@ void bt::sendBT(String sMESSAGE)
 }
 
 /* imposta il nome della scheda BT */
-void bt::sBT(String sNAME_BT)
+void bt::setNameBT(String sNAME_BT)
 {
     bt::BTSerial.begin(sNAME_BT);
 }

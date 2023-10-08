@@ -18,14 +18,14 @@ private:
     string S2s(String STR);   /* converte da String a std::string */
 
 public:
-    bt();                     /* costruttore di default */
-    bt(String);               /* overload del costruttore di default */
-    void sBT(String);         /* imposta il nome della scheda BT */
-    void rBT();               /* stampa a video quanto letto dalla scheda BT */
-    void rBT(String, String); /* stampa su file quanto letto dalla scheda BT */
-    void sendBT(String);      /* invia un messaggio sulla scheda BT */
-    void iBT();               /* imposta la scheda BT */
-    void iBT(String);         /* imposta la sheda BT da file */
+    bt();                        /* costruttore di default */
+    bt(String);                  /* overload del costruttore di default */
+    void setNameBT(String);          /* imposta il nome della scheda BT */
+    void readBT();               /* stampa a video quanto letto dalla scheda BT */
+    void readBT(String, String); /* stampa su file quanto letto dalla scheda BT */
+    void sendBT(String);         /* invia un messaggio sulla scheda BT */
+    void iBT();                  /* imposta la scheda BT */
+    void iBT(String);            /* imposta la sheda BT da file */
 };
 
 #endif // end __BT__

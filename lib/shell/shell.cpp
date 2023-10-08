@@ -10,7 +10,10 @@
  *
  */
 
+/* include le librerie personalizzate */
 #include "shell.h"
+#include "dht11.h"
+#include "iw.h"
 
 /*
  * definisce le costanti della classe
@@ -390,7 +393,7 @@ void shell::ls(String __dir__, String __file__, String __mode__)
 
   File pROOT = SPIFFS.open(__dir__);
   File pFILE_OUT = SPIFFS.open(__file__, __mode__.c_str());
-
+  
   Serial.println("");
 
   if (pFILE_OUT)
@@ -400,7 +403,8 @@ void shell::ls(String __dir__, String __file__, String __mode__)
     {
       pFILE_OUT.print(pFILE.name());
       pFILE_OUT.print("  ");
-      pFILE_OUT.println(pFILE.size());
+      pFILE_OUT.print(pFILE.size());
+      pFILE_OUT.print("\n");
       pFILE = pROOT.openNextFile();
     }
 
@@ -709,7 +713,7 @@ void shell::start(string sRow)
   int iMaxStep = 0;
   int iAux = 0;
 
-  std::regex regCommand("^(( )*(ls|cp|grep|set|echo|format|edlin|rm|mv|exit|cls|ifup|help|cat|lora|bt))");
+  std::regex regCommand("^(( )*(ls|cp|grep|set|echo|format|edlin|rm|mv|exit|cls|ifup|help|cat|lora|bt|iw|sensor))");
   std::regex delimiter("\\|");
 
   // rilevamento della catena di pipe
@@ -1236,7 +1240,6 @@ void shell::exec(string sCommand, string sRow)
      * --lconf : carica una configurazione da file
      */
     std::regex regFlag("(--(rconf|set|send|read)\\s+(.*?))");
-    // std::regex regOpt("(addh|addl|ch|uartbr|uartp|airdr|packetftx|rnoise|tpow|re|ftx|lbt|wor|save)(=)(\\s+(\\S+))");
 
     /*
       In questa versione dell'espressione regolare (\w+)=(\w+(\.\w+)?),
@@ -1257,7 +1260,7 @@ void shell::exec(string sCommand, string sRow)
     std::regex regFlin("(<<)\\s*(\\w+\\.\\w+)");
     std::regex regFlout("(\\>{1,2})\\s*(\\w+\\.\\w+)");
 
-    // sRow = sRow + " --";
+    sRow = sRow + " .";
     __PRTVAR__("sRow", sRow)
 
     /* pulisce la variabile file */
@@ -1318,14 +1321,25 @@ void shell::exec(string sCommand, string sRow)
         lr.rlConf();
       }
       /* end read board buffer */
+
+      /* invia un messaggio in modo interattivo */
+      if (sFlag == "send")
+      {
+        /* digita il messaggio */
+        inpmsg.clear();
+        std::cout << std::endl
+                  << "Digita il messaggio da inviare : ";
+        std::cin >> inpmsg;
+        sMSG = inpmsg;
+      }
     }
-    else if (std::regex_search(sRow, result, regFlout))
+    else if (std::regex_search(sRow, result, regFlout)) /* imposta il nome del file dove scrivere il buffer di LoRa */
     {
       __PRTVAR__("result[0]", result[0])
       __PRTVAR__("result[1]", result[1])
       __PRTVAR__("result[2]", result[2])
     }
-    else if (std::regex_search(sRow, result, regFlin))
+    else if (std::regex_search(sRow, result, regFlin)) /* imposta il nome file da inviare  */
     {
       __PRTVAR__("result[0]", result[0])
       __PRTVAR__("result[1]", result[1])
@@ -1337,18 +1351,8 @@ void shell::exec(string sCommand, string sRow)
 
       if (SPIFFS.exists(sFILE))
       {
-        pFILE=SPIFFS.open(sFILE);
+        pFILE = SPIFFS.open(sFILE);
       }
-    }
-
-    if (bManualInput)
-    {
-      /* digita il messaggio */
-      inpmsg.clear();
-      std::cout << std::endl
-                << "Digita il messaggio da inviare : ";
-      std::cin >> inpmsg;
-      sMSG = inpmsg;
     }
 
     /* inizia la trasmissione */
@@ -1415,6 +1419,7 @@ void shell::exec(string sCommand, string sRow)
     std::regex regRead("(\\<{1,2})\\s*(\\w+\\.\\w+)");
     std::regex regWrite("(\\>{1,2})\\s*(\\w+\\.\\w+)");
 
+    sRow = sRow + " .";
     __PRTVAR__("sRow", sRow)
 
     /* Estrae il flag e il suo valore */
@@ -1424,13 +1429,13 @@ void shell::exec(string sCommand, string sRow)
       __PRTVAR__("result[1]", result[1])
       __PRTVAR__("result[2]", result[2])
 
-      if (result[1] == "name")
+      if (result[1] == "name") /* imposta il nome del BT */
       {
         String sNAME = s2S(result[2]);
-        btSerial.sBT(sNAME);
+        btSerial.setNameBT(sNAME);
       }
 
-      if (result[1] == "send")
+      if (result[1] == "send") /* invia un messaggio */
       {
         __PRTDBG__
 
@@ -1442,14 +1447,13 @@ void shell::exec(string sCommand, string sRow)
         std::cin >> inpmsg;
         sMSG = inpmsg;
 
-        btSerial.sBT(sMSG);
+        btSerial.sendBT(sMSG);
       }
 
-      /* legge il buffer del BT */
-      if (result[1] == "read")
+      if (result[1] == "read") /* legge il buffer del BT */
       {
         __PRTDBG__
-        btSerial.rBT();
+        btSerial.readBT();
       }
     }
     else if (std::regex_search(sRow, result, regRead))
@@ -1476,7 +1480,172 @@ void shell::exec(string sCommand, string sRow)
         sMODE = "a+";
       }
 
-      btSerial.rBT(sFileOUT, sMODE);
+      btSerial.readBT(sFileOUT, sMODE);
+    }
+
+    __PRTDBG__
+
+    sRow.clear();
+  }
+
+  //  _
+  // (_)  _ __ _
+  // ║ ║ \ V  V /
+  // ║_║  \_/\_/
+  else if (sCommand == "iw") /* gestione della configurazione di rete */
+  {
+
+#ifndef __IW__
+#define __IW__
+    static iw wlan0;
+#endif
+
+    sRow = sRow + " .";
+
+    __PRTDBG__
+
+    std::regex regFlag("--(scan|connect|status|disconnect)\\s+(.*?)");
+
+    if (std::regex_search(sRow, result, regFlag))
+    {
+      __PRTVAR__("result[0]", result[0])
+      __PRTVAR__("result[1]", result[1])
+      __PRTVAR__("result[2]", result[2])
+
+      if (result[1] == "scan") /* scansiona le reti */
+      {
+        wlan0.scan();
+      }
+
+      if (shell::trim(result[1]) == "connect") /* connessione ad una rete */
+      {
+
+        std::string sSet;
+
+        /*
+          In questa versione dell'espressione regolare (\w+)=(\w+(\.\w+)?),
+          la parte (\w+(\.\w+)?) cattura il valore. La parte \w+ cattura una
+          sequenza di caratteri alfanumerici, e (\.\w+)? indica che può esserci
+          una parte opzionale con un punto seguito da una sequenza di caratteri
+          alfanumerici. In questo modo, i valori che contengono il carattere punto
+          saranno catturati correttamente.
+        */
+        // std::regex regOpt("(\\w+)=(\\w+(\\.\\w+\\[\\]\\(\\)\\@)*)");
+        std::regex regOpt("(passwd|ssid)(=)[\\w@\\[\\]\\;\\:]+");
+
+        /* ciclo di estrazione delle opzioni del comando */
+        std::sregex_iterator itOpt(sRow.begin(), sRow.end(), regOpt);
+        std::sregex_iterator endOpt;
+
+        while (itOpt != endOpt)
+        {
+          std::smatch matchOpt = *itOpt;
+
+          __PRTVAR__("matchOpt[0]", matchOpt[0])
+          __PRTVAR__("matchOpt[1]", matchOpt[1])
+          __PRTVAR__("matchOpt[2]", matchOpt[2])
+
+          /* impostazione della configurazione */
+          sSet = matchOpt[0];
+          shell::set("set " + sSet);
+
+          ++itOpt;
+        }
+
+        if (wlan0.connect(s2S(mVar["ssid"]), s2S(mVar["passwd"])) == 3)
+        {
+          std::cout << "dispositivo connesso" << std::endl;
+        }
+        else
+        {
+          std::cout << "dispositivo non connesso" << std::endl;
+        }
+      }
+
+      if (result[1] == "status") /* visualizza lo stato della connessione wifi */
+      {
+        __PRTDBG__
+
+        std::cout << std::endl
+                  << "SSID=" << shell::S2s(WiFi.SSID()) << std::endl;
+        std::cout << "MAC=" << shell::S2s(WiFi.macAddress()) << std::endl;
+        std::cout << "IP=" << shell::S2s(WiFi.localIP().toString()) << std::endl;
+        std::cout << "SUB=" << shell::S2s(WiFi.subnetMask().toString()) << std::endl;
+        std::cout << "GW=" << shell::S2s(WiFi.gatewayIP().toString()) << std::endl;
+        std::cout << "HOSTNAME=" << shell::S2s(WiFi.getHostname()) << std::endl;
+        std::cout << "DNS=" << shell::S2s(WiFi.dnsIP().toString()) << std::endl;
+      }
+
+      if (result[1] == "disconnect") /* disconnette la rete wifi a cui è collegata la ESP */
+      {
+        WiFi.disconnect();
+        std::cout << std::endl
+                  << "SSID=" << shell::S2s(WiFi.SSID()) << std::endl;
+        std::cout << "MAC=" << shell::S2s(WiFi.macAddress()) << std::endl;
+        std::cout << "IP=" << shell::S2s(WiFi.localIP().toString()) << std::endl;
+        std::cout << "SUB=" << shell::S2s(WiFi.subnetMask().toString()) << std::endl;
+        std::cout << "GW=" << shell::S2s(WiFi.gatewayIP().toString()) << std::endl;
+        std::cout << "HOSTNAME=" << shell::S2s(WiFi.getHostname()) << std::endl;
+        std::cout << "DNS=" << shell::S2s(WiFi.dnsIP().toString()) << std::endl;
+      }
+    }
+
+    sRow.clear();
+  }
+
+  // ╔══╗╔══╗╔═╗ ╔══╗╔══╗╔═╗
+  // ║══╣║╔╗║║╔╗╗║══╣║╔╗║║╔╝
+  // ╠══║║║═╣║║║║╠══║║╚╝║║║
+  // ╚══╝╚══╝╚╝╚╝╚══╝╚══╝╚╝
+  else if (sCommand == "sensor") /* gestione del sensore  */
+  {
+
+    String sFileIN;
+    String sFileOUT;
+    String sMODE;
+    String sMSG;
+
+#ifndef __SENSOR__
+#define __SENSOR__
+#define GPIODHT 35
+    pinMode(GPIO_NUM_35, INPUT);
+    static dht11 sensorDHT(GPIODHT);
+#endif
+
+    std::regex regFlag("--(readT|readU)\\s+(\\S+)");
+
+    /*
+       In questa versione dell 'espressione regolare, (\\>{1,2}) cattura
+       l' operatore di ridirezione singola(>) o doppia(>>) e(\\w +\\.\\w +)
+       cattura il nome del file.La parte \\> {1, 2} corrisponde a uno o due
+       caratteri di maggiore >.
+    */
+    std::regex regRead("(\\<{1,2})\\s*(\\w+\\.\\w+)");
+    std::regex regWrite("(\\>{1,2})\\s*(\\w+\\.\\w+)");
+
+    sRow = sRow + " .";
+    __PRTVAR__("sRow", sRow)
+
+    /* Estrae il flag e il suo valore */
+    if (std::regex_search(sRow, result, regFlag))
+    {
+      __PRTVAR__("result[0]", result[0])
+      __PRTVAR__("result[1]", result[1])
+      __PRTVAR__("result[2]", result[2])
+
+      if (result[1] == "readT") /* legge la temperatura */
+      {
+        __PRTDBG__
+        // std::cout << std::endl
+        //           << sens. << std::endl;
+      }
+
+      if (result[1] == "readU") /* invia un messaggio */
+      {
+        __PRTDBG__
+        // std::cout << std::endl
+        //           << sensorDHT.readUMD() << std::endl;
+      }
     }
 
     __PRTDBG__

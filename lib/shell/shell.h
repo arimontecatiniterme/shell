@@ -15,7 +15,7 @@
  */
 #include <Arduino.h>         /* si utilizza per gli oggetti String */
 #include <BluetoothSerial.h> /* libreria per la gestione BT */
-#include <FS.h>              // Libreria per le funzionalita del file system
+#include <FS.h>              /* Libreria per le funzionalita del file system */
 #include <SPIFFS.h>          /* Libreria specifica per la gestione del filesystem di tipo SPIFFS installato della memoria flash della ESP32 */
 #include <SoftwareSerial.h>  /* include la libreria per la personalizzazione della comunicazione seriale */
 
@@ -24,8 +24,11 @@
  * Libreria di utility per la gestione di una board LoRa scritta da Renzo Mischianti https://www.mischianti.org/
  */
 #include "LoRa.h"
+
+/* importazione delle librerie personali */
 #include "bt.h"
 #include "edlin.h"
+#include "input.h"
 
 /*
  * include le librerie standard per C++
@@ -34,11 +37,9 @@
 #include <map>
 #include <regex>
 #include <vector>
+#include <fstream>
 
-/*
- * include la libreria personalizzata per la gestione dell'input su seriale
- */
-#include "input.h"
+
 
 #ifndef __SHELL__
 #define __SHELL__
@@ -100,7 +101,7 @@ private:
     int iPos;
   };
 
-  std::vector<struct strPosix> vPattern;
+ 
 
   // FUNZIONI DI UTILITA' DELLA CLASSE SHELL
   void s2IP(string, int[]);                                                                 // converte una stringa in un indirizzo IP
@@ -134,12 +135,8 @@ public:
   boolean cp(String, String);      // copia un file ( ok )
   boolean mv(String, String);      // sposta un file (ok )
   boolean format();                // formatta il file system ( ok )
-  void ls(String);                 // elenca i file della directory passata come parametro e stampa a video
-  void ls(String, String, String); // elenca i file della directory passata come parametro e stampa su file
-
-  /* COMANDI DI SHELL PER LA GESTIONE DELLA RETE */
-  void ifconfig();  // stampa lo stato della configurazione di rete
-  int ifup(string); // attiva la scheda wifi in una delle seguenti modalita'
+  void ls(String);                 // elenca i file della directory passata come parametro e stampa a video (ok)
+  void ls(String, String, String); // elenca i file della directory passata come parametro e stampa su file (ok)
 
   /* COMANDI PUBBLICI DI UTILITY SHELL */
   void set(string);                               // imposta il valore di una vairabile
@@ -152,4 +149,4 @@ public:
 
 }; // end class shell
 
-#endif // __SHELL__
+#endif 
