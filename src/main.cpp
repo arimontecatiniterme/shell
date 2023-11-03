@@ -94,14 +94,12 @@
 
 #define BUTTON GPIO_NUM_12 // pin per il button che permette l'accesso alla shell
 
-using namespace std;
-
 /* imposta e variabili locali */
 const int iPort = 80; /* porta di ascolto del web server */
 
 /* dichiara gli oggetti */
-shell sh;        /* oggetti di tipo shell */
-webs wbs(iPort); /* imposta il web server */
+shell sh;
+webs wbs(iPort);
 
 /* funzione senza scopo da utilizzare per impegnare il tempo */
 void makesAnything()
@@ -152,24 +150,40 @@ void setup()
   Serial.begin(9600);
   Serial.println("Serial is ready to accept input");
 
+  /* inizializza i PIN */
+  pinMode(BUTTON, INPUT_PULLUP); /* pulsante */
+
   /* inizializza il filesystem */
   Serial.print(F("Inizializing FS..."));
   if (SPIFFS.begin(true))
   {
     Serial.println(F("done."));
-    // sh.start("iw --connect passwd=saksdfiower45grtwr8@[]] ssid=anonimasarda");
     delay(3000);
-    sh.start("iw --connect passwd=settembre63 ssid=bakunin");
-    sh.start("iw --status");
-    sh.start("ls");
-    wbs.onFile("/", "/index.html", HTTP_GET);
-    wbs.onFile("/shell.html", "/shell.html", HTTP_GET);
-    wbs.onLS("/ls.html", HTTP_GET);
-    wbs.onFile("/shell.txt", "/shell.txt", HTTP_GET);
-    
-    wbs.onMedia("/shell.txt", "/shell.txt", "text/plain", HTTP_GET);
-    wbs.onMedia("/worg.css", "/worg.css", "text/plain", HTTP_GET);
 
+    /* attiva la connessione internet */
+    String sIW;
+    sIW = "iw --connect passwd=saksdfiower45grtwr8@[]] ssid=anonimasarda";
+    sh.start(sIW);
+
+    // sIW = "iw --connect passwd=settembre63 ssid=bakunin";
+    // sh.start(sIW);
+
+    sIW = "iw --status";
+    sh.start(sIW);
+
+    sIW = "bt --name esp-iu5hls";
+    // sh.start(sIW);
+
+    // impostazioni delle risorse del web server
+    wbs.onFile("/", "/index.html", HTTP_GET);
+    wbs.onFile("/help.html", "/help.html", HTTP_GET);
+    wbs.onFile("/dht.html", "/dht.html", HTTP_GET, &sh, "sensor >> dht.txt");
+
+    wbs.onText("/send", "Dati inviati", HTTP_GET, &sh, "macro /dht.mcr");
+
+    wbs.onMedia("/dht.txt", "/dht.txt", "text/plain", HTTP_GET);
+
+    // avvio del web server
     wbs.begin();
   }
   else
@@ -181,5 +195,11 @@ void setup()
 void loop()
 {
 
-  sh.start();
+  /* ciclo di controllo per entrare in modalita' shell */
+  while (digitalRead(BUTTON) == HIGH)
+  {
+    std::cout << std::endl; /* salta una riga */
+    sh.start();             /* avvia la sessione di shell in modo interattivo */
+    wbs.clear();            /* pulisce la coda delle richieste ddel webserver */
+  }
 }

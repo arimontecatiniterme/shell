@@ -28,23 +28,23 @@
 /* importazione delle librerie personali */
 #include "bt.h"
 #include "edlin.h"
+#include "fbase.h"
 #include "input.h"
 
 /*
  * include le librerie standard per C++
  */
+#include <LittleFS.h>
+#include <SD.h>
+#include <Update.h>
 #include <algorithm> /* include gli algoritmi di uso comune */
+#include <fstream>
 #include <map>
 #include <regex>
 #include <vector>
-#include <fstream>
-
-
 
 #ifndef __SHELL__
 #define __SHELL__
-
-using namespace std;
 
 class shell
 {
@@ -96,33 +96,31 @@ private:
   /* struttura e vettore dei flag */
   struct strPosix
   {
-    string sPattern;
-    string sValue;
+    std::string sPattern;
+    std::string sValue;
     int iPos;
   };
 
- 
-
   // FUNZIONI DI UTILITA' DELLA CLASSE SHELL
-  void s2IP(string, int[]);                                                                 // converte una stringa in un indirizzo IP
-  string trim(const std::string &);                                                         // elimina gli spazi iniziali e finali
-  string rsearch(string, string);                                                           // esegue la ricerca con regexp
-  String s2S(string);                                                                       // converte da string a String
-  string S2s(String);                                                                       // converte da String a string
+  void s2IP(std::string, int[]);                                                            // converte una stringa in un indirizzo IP
+  std::string trim(const std::string &);                                                    // elimina gli spazi iniziali e finali
+  std::string rsearch(std::string, std::string);                                            // esegue la ricerca con regexp
+  String s2S(std::string);                                                                  // converte da string a String
+  std::string S2s(String);                                                                  // converte da String a string
   int dbg();                                                                                // attiva disattiva il debug
   static boolean sortFlag(const strPosix &a, const strPosix &b) { return a.iPos < b.iPos; } // ordina la posizione dei flag
 
   // Comandi shell interni
-  void lora(string);   // gestisce una scheda lora collegata alla board ESP32
-  void txlora(String); // invia il messaggio mediante lora
-  void bts(string);    // gestisce la comunicazione bluetoothSerial
+  void lora(std::string); // gestisce una scheda lora collegata alla board ESP32
+  void txlora(String);    // invia il messaggio mediante lora
+  void bts(std::string);  // gestisce la comunicazione bluetoothSerial
 
   // FUNZIONI DI UTILITA' DELLA SHELL
-  void exec(string, string); // esegue un comando di shell
+  void exec(std::string, std::string); // esegue un comando di shell
 
 public:
-  shell();       // costruttore di default inizializza l'oggetto con i valori di default
-  shell(String); // overload dei costruttore con parametri personalizati
+  shell();            // costruttore di default inizializza l'oggetto con i valori di default
+  shell(std::string); // overload dei costruttore con parametri personalizzati
 
   /*
    * Avvio della sessione di shell.
@@ -139,14 +137,16 @@ public:
   void ls(String, String, String); // elenca i file della directory passata come parametro e stampa su file (ok)
 
   /* COMANDI PUBBLICI DI UTILITY SHELL */
-  void set(string);                               // imposta il valore di una vairabile
-  void echo(string);                              // visualizza a video o salva su il valore una variabile
+  void set(std::string);                          // imposta il valore di una vairabile
+  void echo(std::string);                         // visualizza a video o salva su il valore una variabile
   void grep(std::string, String);                 // applica una regexp al contenuto di un file con stampa a video
   void grep(std::string, String, String, String); // applica una regexp al contenuto di un file con stampa su file
                                                   /* void grep(regex, file da leggere, file da scrivere, modo scrittura)*/
   void start();                                   // avvio della shell in modo interattivo
-  void start(string);                             // avvio della sessione di shell in modo trasparent
+  void start(std::string);                        // avvio della sessione di shell in modo trasparent
+  void start(String);                             // avvio della sessione di shell in modo trasparente ma con comando di tipo String nativo
+  void macro(String);                             // esecuzione dei comandi contenuti in un file di tipo mcr
 
 }; // end class shell
 
-#endif 
+#endif

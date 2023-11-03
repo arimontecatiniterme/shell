@@ -32,7 +32,6 @@ void webs::begin()
 /* associa un file html ad un url */
 void webs::onFile(String sURL, String sFile, int iMode)
 {
-
     this->websrv.on(sURL.c_str(), iMode, [sFile](AsyncWebServerRequest *request)
                     {
         // Gestore per la URl del sito
@@ -40,11 +39,39 @@ void webs::onFile(String sURL, String sFile, int iMode)
         request->send(SPIFFS, sFile, "text/html"); });
 }
 
+/* associa un file html ad un url ma prima esegue un comando shell */
+void webs::onFile(String sURL, String sFILE, int iMode, shell* sh , String sCMD)
+{
+
+    this->websrv.on(sURL.c_str(), iMode, [sFILE, sCMD, sh](AsyncWebServerRequest *request)
+                    {
+        // esecuzione del comando
+        sh->start(sCMD);
+
+        // Gestore per la URl del sito
+        // invia il file sFILE
+        request->send(SPIFFS, sFILE, "text/html"); });
+}
+
 /* associa una stringa ad un url */
 void webs::onText(String sURL, String sText, int iMode, AsyncWebServer *aws)
 {
     aws->on(sURL.c_str(), iMode, [sText](AsyncWebServerRequest *request)
             {
+        // Gestore per la URl del sito
+        // associa una stringa 
+        request->send(200, "text/html", sText); });
+}
+
+/* associa una stringa ad un url con l'esecuzione di un comando shell*/
+void webs::onText(String sURL, String sText, int iMode, shell* sh, String sCMD)
+{
+    this->websrv.on(sURL.c_str(), iMode, [sText, sCMD, sh](AsyncWebServerRequest *request)
+                    {
+
+        // esecuzione del comando di shell
+        sh->start(sCMD);
+
         // Gestore per la URl del sito
         // associa una stringa 
         request->send(200, "text/html", sText); });
@@ -60,26 +87,53 @@ void webs::onMedia(String sURL, String sFILE, String sMIMET, int iMode)
         request->send(SPIFFS, sFILE, sMIMET); });
 }
 
-/* associa ad URL il comando ls della shell */
-void webs::onLS(String sURL, int iMode)
-{
-    this->websrv.on(sURL.c_str(), iMode, [](AsyncWebServerRequest *request)
-                    {
-        // Gestore per la URl del sito
-        // associa una un file
-        shell sh;
-        sh.start("ls > shell.txt");
-        request->send(SPIFFS, "/ls.html"); });
-}
 
-/* associa ad URL il comando ls della shell */
-void webs::onDownload(String sURL)
+    /* associa ad URL il comando ls della shell */
+    void
+    webs::onDownload(String sURL)
 {
     this->websrv.on(sURL.c_str(), HTTP_GET, [](AsyncWebServerRequest *request)
                     {
         // Gestore per la URl del sito
         // associa una un file
         shell sh;
-        sh.start("ls > shell.txt");
+        
         request->send(SPIFFS, "/ls.html"); });
+}
+
+/* gestisce una form trasferendo in memoria le variabili dei campi */
+void webs::onForm_FORM_Text(String sURL, String sTEXT, int iMode, std::string sCmd)
+{
+
+    /* definisce le variabili per la gestione della form */
+
+    this->websrv.on(sURL.c_str(), iMode, [sTEXT, sCmd](AsyncWebServerRequest *request)
+                    {
+        /* definisce le variabili per la gestione della form */
+        shell sh;                           /* crea un oggetto di tipo shell */
+        int iNumParams = request->params(); /* numero dei parametri */
+        String sNAME;                       /* nome del parametro */
+        String sVALUE;                      /* valore del parametro */
+
+        /* ciclo di trasferimento in memoria dei parametri */
+        for (int i = 0; i < iNumParams; i++)
+            {
+                sNAME = request->getParam(i)->name();
+                sVALUE = request->getParam(i)->value();
+
+                /* trasferisce in memoria i parametri della form */
+                sh.start("set " + sNAME +"=" + sVALUE);
+            }
+
+        /* esegue il comando di shell assegnato all'URL */
+        sh.start(sCmd);
+
+        // Gestore per la URl del sito
+        // associa una stringa 
+        request->send(200, "text/html", sTEXT); });
+}
+
+
+void webs::clear(){
+    this->clear();
 }

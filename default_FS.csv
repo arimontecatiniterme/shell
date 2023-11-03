@@ -1,0 +1,43 @@
+# Modificato
+# Name,     Type, SubType, Offset,   Size, Flags
+# nvs,      data, nvs,     0x9000,   0x5000,
+# otadata,  data, ota,     0xe000,   0x2000,
+# app0,     app,  ota_0,   0x10000,  0x1E0000,    # Aumentato da 0x140000 a 0x1E0000
+# app1,     app,  ota_1,   0x1F0000, 0x1E0000,    # Aumentato da 0x140000 a 0x1E0000
+# spiffs,   data, spiffs,  0x3D0000, 0x230000,
+
+#
+# Schema grafico della flash
+#
+#     5000      2000     1E0000    1E0000 
+#     __^__   ___^___   ___^___   ___^___   ___^___
+#    /     \ /       \ /       \ /       \ /       \
+#   |-------|---------|---------|---------|---------|
+# 9000    E000      10000     1F0000    3D0000
+#    \__ __/\____ ___/ \___ ___/ \___ ___/ \___ ___/
+#       v        v         v         v         v
+#      nvs     tadata    ota_0     ota_1     spiffs
+#
+#
+
+# Modificato
+# Name,   Type, SubType, Offset,   Size,      Flags
+nvs,      data, nvs,     0x9000,   0x5000,
+otadata,  data, ota,     0xe000,   0x2000,
+app0,     app,  ota_0,   0x10000,  0x3C0000,
+spiffs,   data, spiffs,  0x3D0000, 0x30000,    
+
+
+#
+# Schema grafico della flash
+#
+#      5000      2000     3C0000      5000 minore della dimensione max che e' 0x230000
+#     ___^___   ___^___   ___^___   ___^___  
+#    /       \ /       \ /       \ /       \ 
+#   |---------|---------|---------|---------|
+# 9000      E000      10000     3D0000    
+#    \___ ___/ \___ ___/ \___ ___/ \___ ___/ 
+#        V         V         V         V        
+#       nvs     otadata    ota_0      spiffs
+#
+#

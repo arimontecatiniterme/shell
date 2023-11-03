@@ -7,15 +7,15 @@
 #include <SPIFFS.h>
 #include <iostream>
 
-using namespace std;
+//using namespace std;
 
 class bt
 {
 
 private:
     BluetoothSerial BTSerial; /* oggetto BT */
-    String s2S(string);       /* converte da std::string a String */
-    string S2s(String STR);   /* converte da String a std::string */
+    String s2S(std::string);       /* converte da std::string a String */
+    std::string S2s(String STR);   /* converte da String a std::string */
 
 public:
     bt();                        /* costruttore di default */

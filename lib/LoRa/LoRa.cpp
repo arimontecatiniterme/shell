@@ -501,7 +501,24 @@ void LoRa::slMsg(int iAddh, int iAddl, int iCH, String sMsg)
 /* legge un messaggio LoRa */
 void LoRa::rlMsg()
 {
-    e220ttl.receiveMessage();
+    if (e220ttl.available() > 1)
+    {
+        ResponseContainer rc = e220ttl.receiveMessage();
+
+        if (rc.status.code != 1)
+        {
+            rc.status.getResponseDescription();
+        }
+        else
+        {
+            // Print the data received
+            std::cout << "Received: " + rc.data;
+        }
+    }
+    else
+    {
+        std::cout << "Nothing to read on Lora";
+    }
 }
 
 /* converte da std::string a String */
@@ -557,4 +574,3 @@ std::string LoRa::S2s(String STR)
     return str;
 
 } // end
-

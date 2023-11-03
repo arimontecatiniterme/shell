@@ -36,14 +36,14 @@ void bt::readBT(String sFILE, String sMODE)
     {
         while (BTSerial.available())
         {
-            pFILE.println(BTSerial.readStringUntil('\n'));
+            pFILE.print(BTSerial.readStringUntil('\n'));
         }
     }
     pFILE.close();
 }
 
 /* converte da std::string a String */
-String bt::s2S(string str)
+String bt::s2S(std::string str)
 {
     int len = 0;
     int pos;
@@ -71,12 +71,12 @@ String bt::s2S(string str)
 } // end
 
 /* converte da String a std::string */
-string bt::S2s(String STR)
+std::string bt::S2s(String STR)
 {
     int len = 0;
     int pos;
     char rc;
-    string str;
+    std::string str;
 
     len = STR.length();
     char buffer[len + 2];
@@ -99,7 +99,7 @@ string bt::S2s(String STR)
 /* invia un messaggio sulla scheda BT */
 void bt::sendBT(String sMESSAGE)
 {
-     bt::BTSerial.println(sMESSAGE);
+    bt::BTSerial.println(sMESSAGE);
 }
 
 /* imposta il nome della scheda BT */

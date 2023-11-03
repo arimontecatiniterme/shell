@@ -95,7 +95,7 @@ void input::read_Rx()
     //   break;
     // } // end of control block
 
-    std::cout << flush;
+    std::cout << std::flush;
 
     /* Ciclo di acquisizione della stringa. Si esegue fino a quando non si preme
        return. Ad ogni pressione del tasto si resetta il contatore del timeout.
@@ -160,7 +160,7 @@ ReturnReceivedString:
 } // fine della funzione Ser_Rx()
 
 /* converte la stringa di arduino in std::string */
-string input::STR2str(String STR)
+std::string input::STR2str(String STR)
 {
   int len = 0;
   int pos;
@@ -184,7 +184,7 @@ string input::STR2str(String STR)
 }
 
 /* converte da std::string a String */
-String input::str2STR(string str)
+String input::str2STR(std::string str)
 {
   int len = 0;
   int pos;

@@ -1,0 +1,827 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2023-11-01 mer 16:44 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LABINT - HELP</title>
+<meta name="author" content="andrea" />
+<meta name="generator" content="Org Mode" />
+<style>
+  #content { max-width: 60em; margin: auto; }
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #e6e6e6;
+    border-radius: 3px;
+    background-color: #f2f2f2;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: auto;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    top: -8px;
+    right: 12px;
+    padding: 3px;
+    color: #555;
+    background-color: #f2f2f299;
+  }
+  pre.src:hover:before { display: inline; margin-top: 14px;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-authinfo::before { content: 'Authinfo'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .equation-container {
+    display: table;
+    text-align: center;
+    width: 100%;
+  }
+  .equation {
+    vertical-align: middle;
+  }
+  .equation-label {
+    display: table-cell;
+    text-align: right;
+    vertical-align: middle;
+  }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { }
+</style>
+<link rel="stylesheet" title="Standard" href="https://arimontecatini.it/style/worg.css" type="text/css" />
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em"
+             }
+});
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body>
+<div id="org-div-home-and-up">
+ <a accesskey="h" href="./help.html"> UP </a>
+ |
+ <a accesskey="H" href="./"> HOME </a>
+</div><div id="content" class="content">
+<h1 class="title">LABINT - HELP</h1>
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org0bbca17">1. Premessa</a></li>
+<li><a href="#org61d5ff7">2. Elenco Comandi</a>
+<ul>
+<li><a href="#org50bcb9c">2.1. cls</a></li>
+<li><a href="#org56d52e4">2.2. help</a></li>
+<li><a href="#org7842c82">2.3. exit</a></li>
+<li><a href="#orgef870cc">2.4. cat</a>
+<ul>
+<li><a href="#org1c5d3c6">2.4.1. Sintassi</a></li>
+</ul>
+</li>
+<li><a href="#orga86cae8">2.5. format</a>
+<ul>
+<li><a href="#org7d2b4cd">2.5.1. sintassi</a></li>
+</ul>
+</li>
+<li><a href="#org5f03a02">2.6. mv</a>
+<ul>
+<li><a href="#org29a0b28">2.6.1. sintassi</a></li>
+</ul>
+</li>
+<li><a href="#orgfa18e89">2.7. cp</a>
+<ul>
+<li><a href="#org3e32b66">2.7.1. sintassi</a></li>
+</ul>
+</li>
+<li><a href="#org6c9c5f9">2.8. rm</a></li>
+<li><a href="#org1e11a39">2.9. sintassi</a></li>
+<li><a href="#org844c2ba">2.10. edlin</a>
+<ul>
+<li><a href="#org4dc2215">2.10.1. sintassi</a></li>
+</ul>
+</li>
+<li><a href="#org1d9c1bd">2.11. echo</a>
+<ul>
+<li><a href="#orged2f54a">2.11.1. sintassi</a></li>
+</ul>
+</li>
+<li><a href="#orga6d06ac">2.12. set</a>
+<ul>
+<li><a href="#org1f00b1f">2.12.1. sintassi</a></li>
+</ul>
+</li>
+<li><a href="#orgbec618f">2.13. ls</a>
+<ul>
+<li><a href="#org4a93539">2.13.1. sintassi</a></li>
+</ul>
+</li>
+<li><a href="#org06c3472">2.14. grep</a>
+<ul>
+<li><a href="#org990a591">2.14.1. sintassi</a></li>
+<li><a href="#org60472dc">2.14.2. esempio</a></li>
+</ul>
+</li>
+<li><a href="#orgaa6132b">2.15. lora</a>
+<ul>
+<li><a href="#org8976d8d">2.15.1. flag</a></li>
+</ul>
+</li>
+<li><a href="#org1ee67eb">2.16. bt</a>
+<ul>
+<li><a href="#org8fdde53">2.16.1. flag</a></li>
+</ul>
+</li>
+<li><a href="#org49b3b42">2.17. iw</a>
+<ul>
+<li><a href="#orgfac411e">2.17.1. sintassi</a></li>
+</ul>
+</li>
+<li><a href="#org60a0ff5">2.18. fbase</a>
+<ul>
+<li><a href="#org8ec1dff">2.18.1. sintassi</a></li>
+</ul>
+</li>
+<li><a href="#org6218f55">2.19. sensor</a>
+<ul>
+<li><a href="#org7c7b528">2.19.1. sintassi</a></li>
+</ul>
+</li>
+<li><a href="#orgf90b91a">2.20. fb</a>
+<ul>
+<li><a href="#org81ab1b0">2.20.1. sintassi</a></li>
+</ul>
+</li>
+<li><a href="#org510f21b">2.21. macro</a>
+<ul>
+<li><a href="#orgce54ff4">2.21.1. sintassi</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+
+
+<div id="outline-container-org0bbca17" class="outline-2">
+<h2 id="org0bbca17"><span class="section-number-2">1.</span> Premessa</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+L' ambiente di shell per board di tipo ESP32 / arduino / ESP8266 prevede du modi di funzionamento :
+</p>
+
+<ul class="org-ul">
+<li><b>modo interattivo</b> : e' la modalita' con cui l'utente collegandosi tramite la seriale puo' digitare direttamente i comandi;</li>
+<li><b>modo trasparente</b> : i comandi possono essere all'interno del codice con possibilita' di cattuarne il risultato.</li>
+</ul>
+
+<p>
+Alcuni comandi prevedono possibilita' di redirezione di input/ouput verso file mediante l'utilizzo dei seguenti token :
+</p>
+
+<ul class="org-ul">
+<li><b>&lt;&lt; [file]</b> : accetta l'input da file;</li>
+<li><b>&gt;&gt; [file]</b> : accoda l'output ad un file, se il file non esiste lo crea;</li>
+<li><b>&gt; [file]</b> : scrive l'output su file, se il file esiste lo sovrascrive.</li>
+</ul>
+
+<p>
+Mediante l'utilizzo dei comandi di redirezione e' possibile costruire catene di comandi simulando una pipe mediante l'utilizzo di file, ad esempio la catena di comandi [comando 0]|[comando 1]|&#x2026;|[comando N] viene interpretata come segue :
+</p>
+
+<ul class="org-ul">
+<li>[comando 0] &gt;&gt; [file0];</li>
+<li>[comando 1] &lt;&lt; [file0] &gt;&gt; [file1];</li>
+<li>&#x2026;</li>
+<li>[comando N] &lt;&lt; [file N-1];</li>
+</ul>
+
+<p>
+in cui devono essere rispette le seguenti regole :
+</p>
+
+<ul class="org-ul">
+<li>il primo dei comandi deve supportare la redirezione in output;</li>
+<li>l'ultimo dei comandi deve supportare la redirezione in input;</li>
+<li>i comandi centrali devono supportare entrabe le redirezioni.</li>
+</ul>
+
+<p>
+Tutti i flag dei comandi sono preceduti dal token <code>--</code> tranne nel caso del comando edlin il cui unico flag e' <code>-f</code>.
+Inoltre all'interno della  shell vi e' la possibilita' di creare variabili di memoria per avere la possibilita' di impostazioni a runtime del sw e per ottenere la configurazione di ambiente. Tra le variabili riservate vi sono:
+</p>
+
+<ul class="org-ul">
+<li>path = "/"  : path attuale;</li>
+<li>debug = "0" : 1 attiva il modo debug della shell;</li>
+<li>shell = path + "shell.ini" : file di configurazione della shell;</li>
+<li>echochar = "1" : 1 attiva l'echo dei caratteri; 0 per disattivare l'echo, utile quando si voglino digitare passwd;</li>
+<li>addl=[valore]      : parte alta dell' indirizzo della board LoRa</li>
+<li>addh=[valore]      : parte passa dell'indirizzo della board LoRa</li>
+<li>ch=[valore]        : canale di trasmissione della board LoRa</li>
+<li>mode=[valore]      : [fixed|simple|struc] modo di trasmissione della board LoRa</li>
+<li>passwd=[valore]    : pasword per la rete wifi</li>
+<li>ssid=[valore]      : nome della rete wireless</li>
+<li>temp=[valore]      : misura della temperatura effettuata dal sensore DHT22</li>
+<li>umid=[valore]      : misura del grado di umidita' effettuata dal sensore DHT22</li>
+<li><p>
+msgbt=[valore]     : messaggio da inviare tramite la scheda BT 
+</p>
+
+<p>
+che e' possibile modificare utilizzando nil comando <b>set</b>.
+</p></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org61d5ff7" class="outline-2">
+<h2 id="org61d5ff7"><span class="section-number-2">2.</span> Elenco Comandi</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+Questa sezione elenca i comandi disposnibili e la loro sintassi.
+</p>
+</div>
+
+<div id="outline-container-org50bcb9c" class="outline-3">
+<h3 id="org50bcb9c"><span class="section-number-3">2.1.</span> cls</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+Cancella lo schermo
+</p>
+</div>
+</div>
+
+<div id="outline-container-org56d52e4" class="outline-3">
+<h3 id="org56d52e4"><span class="section-number-3">2.2.</span> help</h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+Visualizza questo file in modo testuale.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org7842c82" class="outline-3">
+<h3 id="org7842c82"><span class="section-number-3">2.3.</span> exit</h3>
+<div class="outline-text-3" id="text-2-3">
+<p>
+Esce dall'ambiente di shell distruggendo tutte le variabili e tutti gli oggetti per la gestione della wifi, della scheda BT, della scheda LoRa ma lasciando inalterate le configurazioni impostate.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgef870cc" class="outline-3">
+<h3 id="orgef870cc"><span class="section-number-3">2.4.</span> cat</h3>
+<div class="outline-text-3" id="text-2-4">
+<p>
+Visulizza il contenuto del file
+</p>
+</div>
+
+<div id="outline-container-org1c5d3c6" class="outline-4">
+<h4 id="org1c5d3c6"><span class="section-number-4">2.4.1.</span> Sintassi</h4>
+<div class="outline-text-4" id="text-2-4-1">
+<p>
+cat [nome file]
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orga86cae8" class="outline-3">
+<h3 id="orga86cae8"><span class="section-number-3">2.5.</span> format</h3>
+<div class="outline-text-3" id="text-2-5">
+<p>
+Formatta il file system di tipo SPIFFS
+</p>
+</div>
+
+<div id="outline-container-org7d2b4cd" class="outline-4">
+<h4 id="org7d2b4cd"><span class="section-number-4">2.5.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-5-1">
+<p>
+format
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org5f03a02" class="outline-3">
+<h3 id="org5f03a02"><span class="section-number-3">2.6.</span> mv</h3>
+<div class="outline-text-3" id="text-2-6">
+<p>
+Muove copia il [file<sub>origine</sub>] nel file [file<sub>dest</sub>] sovrascrivendo quest'ultimo se esiste e cancellando il primo.
+</p>
+</div>
+
+<div id="outline-container-org29a0b28" class="outline-4">
+<h4 id="org29a0b28"><span class="section-number-4">2.6.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-6-1">
+<p>
+mv [file<sub>origine</sub>] [file<sub>dest</sub>]
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgfa18e89" class="outline-3">
+<h3 id="orgfa18e89"><span class="section-number-3">2.7.</span> cp</h3>
+<div class="outline-text-3" id="text-2-7">
+<p>
+Copia un file di testo in un altro file di testo. Se il file di destinazione eiste chiede di cancellarlo prima della copia.
+</p>
+</div>
+
+<div id="outline-container-org3e32b66" class="outline-4">
+<h4 id="org3e32b66"><span class="section-number-4">2.7.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-7-1">
+<ul class="org-ul">
+<li>cp [file<sub>origine</sub>] [file<sub>dest</sub>]</li>
+</ul>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org6c9c5f9" class="outline-3">
+<h3 id="org6c9c5f9"><span class="section-number-3">2.8.</span> rm</h3>
+<div class="outline-text-3" id="text-2-8">
+<p>
+Cancella un file dopo averne chiesto la conferma.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org1e11a39" class="outline-3">
+<h3 id="org1e11a39"><span class="section-number-3">2.9.</span> sintassi</h3>
+<div class="outline-text-3" id="text-2-9">
+<p>
+rm file<sub>dest</sub>
+</p>
+</div>
+</div>
+
+<div id="outline-container-org844c2ba" class="outline-3">
+<h3 id="org844c2ba"><span class="section-number-3">2.10.</span> edlin</h3>
+<div class="outline-text-3" id="text-2-10">
+<p>
+Semplice editor di linea per file testuali.
+</p>
+</div>
+
+<div id="outline-container-org4dc2215" class="outline-4">
+<h4 id="org4dc2215"><span class="section-number-4">2.10.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-10-1">
+<ul class="org-ul">
+<li>edlin -f [file] : se il file non esiste viene creato</li>
+</ul>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org1d9c1bd" class="outline-3">
+<h3 id="org1d9c1bd"><span class="section-number-3">2.11.</span> echo</h3>
+<div class="outline-text-3" id="text-2-11">
+<p>
+Visualizza le variabili di memoria. Supporta la redirezione in output.
+</p>
+</div>
+
+<div id="outline-container-orged2f54a" class="outline-4">
+<h4 id="orged2f54a"><span class="section-number-4">2.11.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-11-1">
+<ol class="org-ol">
+<li>echo - stampa a video tutte le variabili;</li>
+<li>echo [&gt;&gt;|&gt;] stampa su file tutte le variabili;</li>
+<li>echo $var : stampa a video una particolare variabile;</li>
+<li>echo $var [&gt;&gt;|&gt;] : stampa su file una particolare variabile.</li>
+</ol>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orga6d06ac" class="outline-3">
+<h3 id="orga6d06ac"><span class="section-number-3">2.12.</span> set</h3>
+<div class="outline-text-3" id="text-2-12">
+<p>
+Imposta il valore di una variabile in memoria.
+</p>
+</div>
+
+<div id="outline-container-org1f00b1f" class="outline-4">
+<h4 id="org1f00b1f"><span class="section-number-4">2.12.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-12-1">
+<ol class="org-ol">
+<li>set [var]=[valore] : imposta la variabile var a valore</li>
+<li>set [var]= : cancella la variabile var</li>
+<li>set &lt;&lt; [file] : carica in memoria le variabili memorizzate nel [file] in cui ogni riga avente la struttura [var]=[valore];</li>
+</ol>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgbec618f" class="outline-3">
+<h3 id="orgbec618f"><span class="section-number-3">2.13.</span> ls</h3>
+<div class="outline-text-3" id="text-2-13">
+<p>
+Elenca i file in una directory. Le di regole di filtraggio sono ottenute in combinazione al comando grep. 
+</p>
+</div>
+<div id="outline-container-org4a93539" class="outline-4">
+<h4 id="org4a93539"><span class="section-number-4">2.13.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-13-1">
+<ol class="org-ol">
+<li>ls : stampa a video l'elenco dei file;</li>
+<li>ls [&gt;&gt;|&gt;] : stampa su file output l'elenco dei file</li>
+</ol>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org06c3472" class="outline-3">
+<h3 id="org06c3472"><span class="section-number-3">2.14.</span> grep</h3>
+<div class="outline-text-3" id="text-2-14">
+<p>
+Parsing di espressioni regolari secondo la semantica del C++. Se presente solo la prima parte delle opzioni si ha la stampa a video, se presente la redirezione si ha la stampa su file. 
+</p>
+</div>
+
+<div id="outline-container-org990a591" class="outline-4">
+<h4 id="org990a591"><span class="section-number-4">2.14.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-14-1">
+<p>
+grep (&#x2013;reg [exp] &lt;&lt; [file]) ([&gt;&gt;|&gt;] [file])
+ &#x2013;reg : espressione regolare digitata da riga di comando da applicare ;
+ &lt;&lt; [file] :  file di input a cui applicare la regexp
+ [&gt;&gt; |&gt;] [file] : stampa il contenuto dell'elaborazione nel [file]
+</p>
+</div>
+</div>
+
+<div id="outline-container-org60472dc" class="outline-4">
+<h4 id="org60472dc"><span class="section-number-4">2.14.2.</span> esempio</h4>
+<div class="outline-text-4" id="text-2-14-2">
+<p>
+grep &#x2013;reg ( )*[\w]+( )*(=)( )*[\w]+ &lt;&lt; lora.ini &gt; out.txt
+</p>
+
+<p>
+Applica la regexp ( )*[\w]+( )*(=)( )*[\w]+ al file lora.ini e l'ouput viene memorizzato nel file out.txt che se esiste viene sovrascitto.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgaa6132b" class="outline-3">
+<h3 id="orgaa6132b"><span class="section-number-3">2.15.</span> lora</h3>
+<div class="outline-text-3" id="text-2-15">
+<p>
+Gestisce la configurazione / trasmissione di una scheda LoRa. Le varie opzioni dei flag accettano la sintassi del tipo [&#x2013;flag] [opzione]=[valore]
+</p>
+</div>
+
+<div id="outline-container-org8976d8d" class="outline-4">
+<h4 id="org8976d8d"><span class="section-number-4">2.15.1.</span> flag</h4>
+<div class="outline-text-4" id="text-2-15-1">
+<ul class="org-ul">
+<li>&#x2013;rconf [board] - legge la configurazione di una board LoRa</li>
+<li>&#x2013;set - scrive la configurazione sulla board LoRa [var=valore]
+<ul class="org-ul">
+<li>addl      : parte alta dell' indirizzo</li>
+<li>addh      : parte passa dell'indirizzo</li>
+<li>ch        : canale di trasmissione</li>
+<li>uartbr    : [UART<sub>BPS</sub><sub>1200</sub>|UART<sub>BPS</sub><sub>2400</sub>|UART<sub>BPS</sub><sub>4800</sub>|UART<sub>BPS</sub><sub>9600</sub>|UART<sub>BPS</sub><sub>19200</sub>|UART<sub>BPS</sub><sub>38400</sub>|UART<sub>BPS</sub><sub>57600</sub>|UART<sub>BPS</sub><sub>115200</sub>] : velocita della porta UART</li>
+<li>uartp     : [MODE<sub>00</sub><sub>8N1</sub>|MODE<sub>01</sub><sub>8O1</sub>|MODE<sub>10</sub><sub>8E1</sub>|MODE<sub>11</sub><sub>8N1</sub>] : imposta il modo di parita della porta UART</li>
+<li>airdr     : [AIR<sub>DATA</sub><sub>RATE</sub><sub>000</sub><sub>24</sub>|AIR<sub>DATA</sub><sub>RATE</sub><sub>001</sub><sub>24</sub>|AIR<sub>DATA</sub><sub>RATE</sub><sub>010</sub><sub>24</sub>|AIR<sub>DATA</sub><sub>RATE</sub><sub>011</sub><sub>48</sub>|AIR<sub>DATA</sub><sub>RATE</sub><sub>100</sub><sub>96</sub>|AIR<sub>DATA</sub><sub>RATE</sub><sub>101</sub><sub>192</sub>|AIR<sub>DATA</sub><sub>RATE</sub><sub>110</sub><sub>384</sub>|AIR<sub>DATA</sub><sub>RATE</sub><sub>111</sub><sub>625</sub>] : velocita di tx in bps</li>
+<li>packetftx : [SPS<sub>200</sub><sub>00</sub>|SPS<sub>128</sub><sub>01</sub>|SPS<sub>064</sub><sub>10</sub>|SPS<sub>032</sub><sub>11</sub>] : dimesione del pacchetto</li>
+<li>rnoise    : [RSSI<sub>AMBIENT</sub><sub>NOISE</sub><sub>ENABLED</sub>|RSSI<sub>AMBIENT</sub><sub>NOISE</sub><sub>DISABLED</sub>] : Questo comando può abilitare / disabilitare il tipo di gestione del rimuovere</li>
+<li>tpow      : [POWER<sub>22</sub>|POWER<sub>17</sub>|POWER<sub>13</sub>|POWER<sub>10</sub>|POWER<sub>30</sub>|POWER<sub>27</sub>|POWER<sub>24</sub>|POWER<sub>21</sub>] : potenza di trasmisione</li>
+<li>re        : [RSSI<sub>ENABLED</sub>|RSSI<sub>DISABLED</sub>] : Se abilitato, il modulo riceve dati wireless e seguirà un byte di forza RSSI dopo l'output tramite la porta seriale TXD
+<ul class="org-ul">
+<li>ftx       : [FT<sub>FIXED</sub><sub>TRANSMISSION</sub>|FT<sub>TRANSPARENT</sub><sub>TRANSMISSION</sub>] : imposta la scheda per l utilizzo con indirizzo oppure in modo trasparente</li>
+<li>lbt       : [LBT<sub>ENABLED</sub>|LBT<sub>DISABLED</sub>] : per evitare distorsioni monitora i dati inviati</li>
+<li>wor       : [WAKE<sub>UP</sub><sub>500</sub>|WAKE<sub>UP</sub><sub>1000</sub>|WAKE<sub>UP</sub><sub>1500</sub>|WAKE<sub>UP</sub><sub>2000</sub>|WAKE<sub>UP</sub><sub>2500</sub>|WAKE<sub>UP</sub><sub>3000</sub>|WAKE<sub>UP</sub><sub>3500</sub>|WAKE<sub>UP</sub><sub>4000</sub>] :</li>
+<li>save      : [WRITE<sub>CFG</sub><sub>PWR</sub><sub>DWN</sub><sub>SAVE</sub>|WRITE<sub>CFG</sub><sub>PWR</sub><sub>DWN</sub><sub>LOSE</sub>] : salva o meno la configurazione sulla board LoRa</li>
+</ul></li>
+</ul></li>
+
+<li>&#x2013;send : invio di un messaggio. Se non vengono indicate le opzione del flag queste sono ricavate dalle omonime variabili in memoria.
+<ul class="org-ul">
+<li>addl      : parte alta dell' indirizzo</li>
+<li>addh      : parte passa dell'indirizzo</li>
+<li>ch        : canale di trasmissione</li>
+<li>mode      : [fixed|simple|struc]</li>
+</ul></li>
+
+<li>&lt;&lt; [file] - invia il contentuo del [file];</li>
+<li>[&gt;&gt;|&gt;] [file] - stampa i dati ricevuti su [file].</li>
+</ul>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org1ee67eb" class="outline-3">
+<h3 id="org1ee67eb"><span class="section-number-3">2.16.</span> bt</h3>
+<div class="outline-text-3" id="text-2-16">
+<p>
+Gestisce la configurazione della scheda bluetooth nonche' e invio/ricezione dati
+</p>
+</div>
+
+<div id="outline-container-org8fdde53" class="outline-4">
+<h4 id="org8fdde53"><span class="section-number-4">2.16.1.</span> flag</h4>
+<div class="outline-text-4" id="text-2-16-1">
+<ul class="org-ul">
+<li>&#x2013;name : imposta il nome della scheda BT;</li>
+<li>&#x2013;send : invia i dati immessi da tastiera</li>
+<li>&#x2013;read : legge i dati nella cache del BT e li stampa a video</li>
+<li>&lt;&lt;     : invia i dati memorizzati su file</li>
+<li>[&gt;&gt;|&gt;] : sovrascrive/accoda i dati ricevuti dal BT su file</li>
+</ul>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org49b3b42" class="outline-3">
+<h3 id="org49b3b42"><span class="section-number-3">2.17.</span> iw</h3>
+<div class="outline-text-3" id="text-2-17">
+<p>
+Gestione della configurazione wireless.
+</p>
+</div>
+
+<div id="outline-container-orgfac411e" class="outline-4">
+<h4 id="orgfac411e"><span class="section-number-4">2.17.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-17-1">
+<ul class="org-ul">
+<li>iw &#x2013;[scan|connect|status|disconnect]
+
+<ul class="org-ul">
+<li>&#x2013;scan : elenca tutti le reti non hidden;</li>
+<li>&#x2013;connect passwd=[valore] ssid=[valore] : connette ad una specifica rete;</li>
+<li>&#x2013;status : visuliazza le impostazioni di rete;</li>
+<li>disconnect : disconnette la connessione attiva</li>
+</ul></li>
+</ul>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org60a0ff5" class="outline-3">
+<h3 id="org60a0ff5"><span class="section-number-3">2.18.</span> fbase</h3>
+<div class="outline-text-3" id="text-2-18">
+<p>
+Gestiste l'invio/lettura dei dati in ambiente Firebase. Le opzioni di connessione vengono passate al momento della creazione dell'oggetto e non possono essere passate da riga di comando. 
+</p>
+</div>
+
+<div id="outline-container-org8ec1dff" class="outline-4">
+<h4 id="org8ec1dff"><span class="section-number-4">2.18.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-18-1">
+<ul class="org-ul">
+<li>fb &#x2013;[ins|read]
+<ul class="org-ul">
+<li>&#x2013;ins [path] ([int|float|string])=[valore] : inserisce un valore nella path di un db realtime di firebase</li>
+<li>&#x2013;read [path] : stampa a video il valore della path;</li>
+<li>[&gt;&gt;|&gt;] [file] [path] : stampa su file il valore della path</li>
+</ul></li>
+</ul>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org6218f55" class="outline-3">
+<h3 id="org6218f55"><span class="section-number-3">2.19.</span> sensor</h3>
+<div class="outline-text-3" id="text-2-19">
+<p>
+Gestione di un sensore del tipo DHT22 per la rilevazione di temperatura e umidita'. L'inizializzazione del sensore ( scelta del PIN di collegamento ) avviene nel sw non da riga di comando.
+</p>
+</div>
+
+<div id="outline-container-org7c7b528" class="outline-4">
+<h4 id="org7c7b528"><span class="section-number-4">2.19.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-19-1">
+<ul class="org-ul">
+<li>sensor &#x2013;[readT|readU] [&gt;&gt;|&gt;] [file]
+<ul class="org-ul">
+<li>&#x2013;readT : stampa a video la temperatura misurata;</li>
+<li>&#x2013;readU : stampa a video la percentuale di umidita' rilevata;</li>
+<li>[&gt;&gt;|&gt;] [file] : stampa su file temperatura e umidita' rilevate nella forma [temp|umid]=[valore] di modo da utilizzarla con il comando <b>set</b></li>
+</ul></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+
+<div id="outline-container-orgf90b91a" class="outline-3">
+<h3 id="orgf90b91a"><span class="section-number-3">2.20.</span> fb</h3>
+<div class="outline-text-3" id="text-2-20">
+<p>
+Gestisce l'inerimento/letterua di valori in un database realtime di FireBase.
+</p>
+</div>
+
+<div id="outline-container-org81ab1b0" class="outline-4">
+<h4 id="org81ab1b0"><span class="section-number-4">2.20.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-20-1">
+<ul class="org-ul">
+<li>fb &#x2013;[ins|read] [path] [&gt;&gt;|&gt;] [file]
+<ul class="org-ul">
+<li>fb &#x2013;ins [path] ([int|float|string])[valore|nome var]  : nel caso si usi [nome var] il valore da trasmettere e' quello dell'omonima variabile</li>
+<li>fb &#x2013;read [path] : stampa a video il valore del campo [path]</li>
+<li>fb [&gt;&gt;|&gt;] [file] : stampa su file il valore del campo [path]</li>
+</ul></li>
+</ul>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org510f21b" class="outline-3">
+<h3 id="org510f21b"><span class="section-number-3">2.21.</span> macro</h3>
+<div class="outline-text-3" id="text-2-21">
+<p>
+Esegue in sequenza i comandi memorizzato in un file di testo con estensione mcr. Le riche di commento iniziano con il token # tutto il resto viene interpretato come comando. 
+</p>
+</div>
+
+<div id="outline-container-orgce54ff4" class="outline-4">
+<h4 id="orgce54ff4"><span class="section-number-4">2.21.1.</span> sintassi</h4>
+<div class="outline-text-4" id="text-2-21-1">
+<ul class="org-ul">
+<li>macro [path][file] : deve essere indicata la path del file.</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: andrea</p>
+<p class="date">Created: 2023-11-01 mer 16:44</p>
+<p class="validation"><a href="https://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

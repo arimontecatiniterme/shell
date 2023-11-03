@@ -10,10 +10,12 @@
  *
  */
 
+#include <string.h>
+
 /* include le librerie personalizzate */
-#include "shell.h"
-#include "dht11.h"
+#include "dht22.h"
 #include "iw.h"
+#include "shell.h"
 
 /*
  * definisce le costanti della classe
@@ -211,6 +213,51 @@ boolean shell::cp(String __files__, String __filed__)
 
 } // END cp
 
+/************************************************************/
+//
+//       ID :
+// Descrive : esegue i comandi contenuti in un file di tipo
+//            macro
+//     Date : 15.07.2023
+//   Author : Andrea Venuti
+//
+/************************************************************/
+void shell::macro(String __FILEM__)
+{
+
+  __PRTVAR__("__files__", S2s(__FILEM__))
+
+  std::smatch result;
+  std::regex regMcr("(\\S)+(\\.mcr)");
+  std::regex regRow("^[^#]");
+  std::string __filem__ = S2s(__FILEM__);
+  std::regex_search(__filem__, result, regMcr);
+
+  __PRTVAR__("result[0]", result[0])
+
+  if ((result[0]).length() > 0)
+  {
+    __FILEM__ = s2S(result[0]);
+
+    if (SPIFFS.exists(__FILEM__))
+    {
+      __PRTDBG__
+      File pFILE = SPIFFS.open(__FILEM__);
+      {
+        while (pFILE.available())
+        {
+          std::string sRow = S2s(pFILE.readStringUntil('\n'));
+          if (std::regex_search(sRow, result, regRow))
+          {
+            __PRTVAR__("sRow", sRow)
+            shell::start(sRow);
+          }
+        }
+      }
+    }
+  }
+}
+
 //************************************************************/
 //
 // Descrive : cancella un file
@@ -225,10 +272,10 @@ boolean shell::rm(String __file__)
 
   if (SPIFFS.exists(__file__))
   {
-    regex rAnswer("(s|S|y|Y){1}");
+    std::regex rAnswer("(s|S|y|Y){1}");
     input inpAnswer;
 
-    Serial.print("...Cancello il file " + __file__ + " ? [sN]...");
+    std::cout << "\n...Cancello il file " << S2s(__file__) << " ? [sN]...";
     std::cin >> inpAnswer;
     string sAnswer = inpAnswer;
     String sANSWER = shell::s2S(sAnswer);
@@ -240,7 +287,7 @@ boolean shell::rm(String __file__)
   }
   else
   {
-    Serial.println("...il file non esiste " + __file__ + " oppure e' inaccessibile...");
+    std::cout << "\n...il file non esiste " << S2s(__file__) << " oppure e' inaccessibile...\n";
   }
 
   return bResult;
@@ -289,7 +336,7 @@ boolean shell::format()
 //************************************************************/
 //
 // Descrive : sposta un file
-//     Date : 16.07.20323
+//     Date : 16.07.2023
 //   Author : Andrea Venuti
 //
 //************************************************************/
@@ -330,7 +377,7 @@ boolean shell::mv(String __files__, String __filed__)
   }
   else
   {
-    std::cout << "\n...il files " + __files__ + " non esiste...\n";
+    std::cout << "\n...il files " << __files__ << " non esiste...\n";
   }
 
   if (bAnswer)
@@ -393,7 +440,7 @@ void shell::ls(String __dir__, String __file__, String __mode__)
 
   File pROOT = SPIFFS.open(__dir__);
   File pFILE_OUT = SPIFFS.open(__file__, __mode__.c_str());
-  
+
   Serial.println("");
 
   if (pFILE_OUT)
@@ -412,7 +459,7 @@ void shell::ls(String __dir__, String __file__, String __mode__)
   }
   else
   {
-    Serial.println("...impossibile stampare sul file " + __file__);
+    std::cout << "...impossibile stampare sul file " << S2s(__file__);
   }
 
   Serial.println();
@@ -527,7 +574,7 @@ void shell::set(string __cmd__)
   string sVal;
   string sFile;
 
-  regex r("(<< ([\\w+\\.-@$&]*))");
+  std::regex r("(<< ([\\w+\\.-@$&]*))");
   if (regex_search(__cmd__, result, r))
   {
     __PRTDBG__
@@ -692,12 +739,25 @@ void shell::echo(string __cmd__)
 
 //************************************************************/
 //
+// Descrive :  avvio della sessione di shell in modo
+//             trasparente ma con comando di tipo String nativo
+//     Date : 16.07.2023
+//   Author : Andrea Venuti
+//
+//************************************************************/
+void shell::start(String sCMD)
+{
+  shell::start(S2s(sCMD));
+}
+
+//************************************************************/
+//
 // Descrive : avvia una sessione di shell in modo trasparente
 //     Date :
 //   Author : Andrea Venuti
 //
 //************************************************************/
-void shell::start(string sRow)
+void shell::start(std::string sRow)
 {
 
   sRow = shell::trim(sRow);
@@ -713,7 +773,7 @@ void shell::start(string sRow)
   int iMaxStep = 0;
   int iAux = 0;
 
-  std::regex regCommand("^(( )*(ls|cp|grep|set|echo|format|edlin|rm|mv|exit|cls|ifup|help|cat|lora|bt|iw|sensor))");
+  std::regex regCommand("^(( )*(wbs|macro|fb|ls|cp|grep|set|echo|format|edlin|rm|mv|exit|cls|help|cat|lora|bt|iw|sensor))");
   std::regex delimiter("\\|");
 
   // rilevamento della catena di pipe
@@ -855,7 +915,7 @@ void shell::exec(string sCommand, string sRow)
   //            ╚╝
   if (sCommand == "help")
   {
-    edlin myEdit("/help.txt");
+    edlin myEdit("/help.org");
     myEdit.edit();
     sRow.clear();
   }
@@ -903,6 +963,7 @@ void shell::exec(string sCommand, string sRow)
       __PRTVAR__("sMODE", S2s(sMODE))
 
       shell::ls(s2S(mVar["path"]), s2S(mVar["path"]) + sFILE, sMODE);
+
     } // end blocco che processa le opzioni
     else
     {
@@ -918,7 +979,7 @@ void shell::exec(string sCommand, string sRow)
   //  ╔═╗                 ╔╗
   //  ║╔╝                ╔╝╚╗
   // ╔╝╚╗╔══╗╔═╗╔╗╔╗╔══╗ ╚╗╔╝
-  // ╚╗╔╝║╔╗║║╔╝║╚╝║╚ ╗║  ║║
+  // ╚╗╔╝║╔╗║║╔╝║╚╝║╚═╗║  ║║
   //  ║║ ║╚╝║║║ ║║║║║╚╝╚╗ ║╚╗
   //  ╚╝ ╚══╝╚╝ ╚╩╩╝╚═══╝ ╚═╝
   else if (sCommand == "format")
@@ -1318,7 +1379,7 @@ void shell::exec(string sCommand, string sRow)
       {
         __PRTDBG__
         std::cout << std::endl;
-        lr.rlConf();
+        lr.rlMsg();
       }
       /* end read board buffer */
 
@@ -1408,7 +1469,7 @@ void shell::exec(string sCommand, string sRow)
     static bt btSerial;
 #endif
 
-    std::regex regFlag("--(name|send|read)\\s+(\\S+)");
+    std::regex regFlag("--(name|send|read|sendmem)\\s+(\\S+)");
 
     /*
        In questa versione dell 'espressione regolare, (\\>{1,2}) cattura
@@ -1446,6 +1507,15 @@ void shell::exec(string sCommand, string sRow)
                   << "Digita il messaggio da inviare : ";
         std::cin >> inpmsg;
         sMSG = inpmsg;
+
+        btSerial.sendBT(sMSG);
+      }
+
+      if (result[1] == "sendmem") /* invia un messaggio contenuto in una variabile in memoria */
+      {
+        __PRTDBG__
+
+        sMSG = s2S(mVar["msgbt"]);
 
         btSerial.sendBT(sMSG);
       }
@@ -1600,16 +1670,9 @@ void shell::exec(string sCommand, string sRow)
   else if (sCommand == "sensor") /* gestione del sensore  */
   {
 
-    String sFileIN;
-    String sFileOUT;
-    String sMODE;
-    String sMSG;
-
 #ifndef __SENSOR__
 #define __SENSOR__
-#define GPIODHT 35
-    pinMode(GPIO_NUM_35, INPUT);
-    static dht11 sensorDHT(GPIODHT);
+    static dht22 sensorDHT;
 #endif
 
     std::regex regFlag("--(readT|readU)\\s+(\\S+)");
@@ -1620,7 +1683,6 @@ void shell::exec(string sCommand, string sRow)
        cattura il nome del file.La parte \\> {1, 2} corrisponde a uno o due
        caratteri di maggiore >.
     */
-    std::regex regRead("(\\<{1,2})\\s*(\\w+\\.\\w+)");
     std::regex regWrite("(\\>{1,2})\\s*(\\w+\\.\\w+)");
 
     sRow = sRow + " .";
@@ -1636,20 +1698,186 @@ void shell::exec(string sCommand, string sRow)
       if (result[1] == "readT") /* legge la temperatura */
       {
         __PRTDBG__
-        // std::cout << std::endl
-        //           << sens. << std::endl;
+        std::cout << std::endl
+                  << sensorDHT.readTEMP() << std::endl;
       }
 
       if (result[1] == "readU") /* invia un messaggio */
       {
         __PRTDBG__
-        // std::cout << std::endl
-        //           << sensorDHT.readUMD() << std::endl;
+        std::cout << std::endl
+                  << sensorDHT.readUMD() << std::endl;
       }
+    }
+    else if (std::regex_search(sRow, result, regWrite))
+    {
+      __PRTVAR__("result[0]", result[0])
+      __PRTVAR__("result[1]", result[1])
+      __PRTVAR__("result[2]", result[2])
+
+      String sMODE, sFILE;
+
+      sFILE = s2S(result[2]);
+      sFILE = s2S(mVar["path"].c_str()) + sFILE;
+
+      if (result[1] == ">")
+      {
+        sMODE = "w";
+      }
+      else
+      {
+        sMODE = "a+";
+      }
+
+      __PRTVAR__("sMODE", sMODE.c_str())
+
+      sensorDHT.writeOnFile(sFILE, sMODE.c_str());
     }
 
     __PRTDBG__
 
+    sRow.clear();
+  }
+
+  //  ╔═╗         ╔╗
+  //  ║╔╝         ║║
+  // ╔╝╚╗╔╗╔═╗╔══╗║╚═╗╔══╗ ╔══╗╔══╗
+  // ╚╗╔╝╠╣║╔╝║╔╗║║╔╗║╚ ╗║ ║══╣║╔╗║
+  //  ║║ ║║║║ ║║═╣║╚╝║║╚╝╚╗╠══║║║═╣
+  //  ╚╝ ╚╝╚╝ ╚══╝╚══╝╚═══╝╚══╝╚══╝
+  else if (sCommand == "fb") /* gestore di firebase */
+  {
+
+    fbase fb;
+    String sPATH;
+    String sMODE;
+
+    std::regex regFlag("--(ins|read)\\s+(\\S+)\\s+(\\S+)");
+
+    /*
+       In questa versione dell 'espressione regolare, (\\>{1,2}) cattura
+       l' operatore di ridirezione singola(>) o doppia(>>) e(\\w +\\.\\w +)
+       cattura il nome del file.La parte \\> {1, 2} corrisponde a uno o due
+       caratteri di maggiore >.
+    */
+    std::regex regWrite("(\\>{1,2})\\s*(\\w+\\.\\w+)\\s+(\\S+)");
+
+    sRow = sRow + " .";
+    __PRTVAR__("sRow", sRow)
+
+    /* Estrae il flag e il suo valore */
+    if (std::regex_search(sRow, result, regFlag))
+    {
+
+      __PRTVAR__("result[0]", result[0])
+      __PRTVAR__("result[1]", result[1])
+      __PRTVAR__("result[2]", result[2])
+      __PRTVAR__("result[3]", result[3])
+
+      string sMode = result[1];
+      sPATH = s2S(result[2]);
+      sRow = result[3];
+
+      if (sMode == "ins") /* invia un dato */
+      {
+
+        __PRTVAR__("sRow", sRow)
+
+        /* scelta del tipo di inserimento */
+        std::regex regType("(\\(int\\)|\\(string\\)|\\(float\\))(\\s*(\\S+))+");
+        if (std::regex_search(sRow, result, regType))
+        {
+
+          __PRTVAR__("result[0]", result[0])
+          __PRTVAR__("result[1]", result[1])
+          __PRTVAR__("result[2]", result[2])
+
+          std::string sVal = result[2];
+          std::string sType = result[1];
+
+          /*
+           * se il valore da passare al metodo set di fabse corrisponde all'omonimo nome di
+           * una variabile in memoria
+           */
+          std::regex regVar("\\(([^)]+)\\)");
+          if (std::regex_search(sVal, result, regVar))
+          {
+            __PRTVAR__("result[0]", result[0])
+            std::regex regNomeVar("[A-Za-z0-9]+");
+            if (std::regex_search(sVal, result, regNomeVar))
+            {
+              __PRTVAR__("result[0]", result[0])
+              sVal = mVar[result[0]];
+
+              /*
+               * di seguito si concella la variabile se non e' trovata
+               */
+              if (sVal.length() == 0)
+              {
+                mVar.erase(result[0]);
+                __PRTDBG__
+              }
+            }
+          }
+
+          __PRTVAR__("sVal", sVal)
+
+          fb.set(sPATH, sType, sVal, s2S(sVal));
+
+          __PRTDBG__
+        }
+
+        __PRTDBG__
+      }
+
+      if (sMode == "read") /* legge un dato */
+      {
+        fb.readFB(sPATH);
+      }
+    }
+
+    if (std::regex_search(sRow, result, regWrite))
+    {
+
+      sPATH = s2S(result[3]);
+      String sMODE, sFILE;
+
+      __PRTVAR__("result[0]", result[0])
+      __PRTVAR__("result[1]", result[1])
+      __PRTVAR__("result[2]", result[2])
+      __PRTVAR__("result[3]", sPATH.c_str())
+
+      sFILE = s2S(result[2]);
+      sFILE = s2S(mVar["path"].c_str()) + sFILE;
+
+      if (result[1] == ">")
+      {
+        sMODE = "w";
+      }
+      else
+      {
+        sMODE = "a+";
+      }
+
+      __PRTVAR__("sMODE", sMODE.c_str())
+      __PRTVAR__("sFILE", sFILE.c_str())
+
+      fb.readFBtoPrintFile(sPATH, sFILE, sMODE);
+    }
+
+    __PRTDBG__
+
+    sRow.clear();
+  } /* end firebase */
+
+  // ╔╗╔╗╔══╗ ╔══╗╔═╗╔══╗
+  // ║╚╝║╚═╗║ ║╔═╝║╔╝║╔╗║
+  // ║║║║║╚╝╚╗║╚═╗║║ ║╚╝║
+  // ╚╩╩╝╚═══╝╚══╝╚╝ ╚══╝
+  else if (sCommand == "macro") /* gestore di firebase */
+  {
+    __PRTVAR__("sRow", sRow)
+    shell::macro(s2S(sRow));
     sRow.clear();
   }
 
@@ -1661,6 +1889,7 @@ void shell::exec(string sCommand, string sRow)
   // ╚═══╝╚═╝╚═╝╚══╝ ╚══╝
   else if (sCommand == "exit")
   { // esecuzione del comando ( comando interno )
+    sRow.clear();
     myBoard.bShell = false;
   }
 

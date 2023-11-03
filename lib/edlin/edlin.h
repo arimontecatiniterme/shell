@@ -36,7 +36,7 @@ private:
     struct editFile
     {
         File pFILE;                       // puntatore al file da editare
-        string sFile;                     // nome del file
+        std::string sFile;                     // nome del file
         int maxRow = 0;                   // numero massimo di righe del file
         int posixBuffer = 0;              // indice della posizione all'interno del buffer ( ultima riga visualizzata )
         int startView = 0;                // prima riga del buffer visualizzata
@@ -55,8 +55,8 @@ private:
     void insROW(int);     // inserisce una riga al posto di quella passata come parametro
     void save();          // salva il file
     void newFile(String); // crea un nuovo file
-    String s2S(string);   // converte da String a string
-    string S2s(String);   // converte da string a String
+    String s2S(std::string);   // converte da String a string
+    std::string S2s(String);   // converte da string a String
 
 public:
     edlin(String); // costruttore di default
